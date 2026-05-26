@@ -1,0 +1,235 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  username      String    @unique
+  email         String    @unique
+  passwordHash  String?
+  avatar        String?
+  role          String    @default("customer") // "customer" | "admin"
+  banned        Boolean   @default(false)
+  emailVerified Boolean   @default(false)
+  loyaltyPoints Int       @default(0)
+  referralCode  String?   @unique
+  referredBy    String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  orders           Order[]
+  reviews          Review[]
+  supportTickets   SupportTicket[]
+  notifications    Notification[]
+  wishlistItems    WishlistItem[]
+  robuxOrders      RobuxOrder[]
+  pointTransactions PointTransaction[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model Product {
+  id           String   @id @default(cuid())
+  name         String
+  slug         String   @unique
+  description  String
+  category     String   // "permanent_fruit" | "physical_fruit" | "gamepass" | "fruit_storage" | "account" | "raid_service" | "leveling" | "boosting" | "custom" | "robux"
+  stock        Int      @default(0)
+  priceBdt     Float
+  priceCrypto  Float?
+  rarity       String?  // "common" | "uncommon" | "rare" | "epic" | "legendary" | "mythical"
+  images       String   @default("[]") // JSON array of image URLs
+  featured     Boolean  @default(false)
+  deliveryInfo String?
+  active       Boolean  @default(true)
+  isFlashDeal  Boolean  @default(false)
+  flashDealEndsAt DateTime?
+  originalPrice Float?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  orders        Order[]
+  reviews       Review[]
+  wishlistItems WishlistItem[]
+
+  @@index([category])
+  @@index([featured])
+  @@index([active])
+  @@index([isFlashDeal])
+}
+
+model RobuxPackage {
+  id          String   @id @default(cuid())
+  name        String   // "100 Robux", "400 Robux", etc.
+  amount      Int      // Robux amount
+  priceBdt    Float
+  priceCrypto Float?
+  bonus       Int      @default(0) // Bonus robux
+  popular     Boolean  @default(false)
+  active      Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  robuxOrders RobuxOrder[]
+
+  @@index([active])
+  @@index([sortOrder])
+}
+
+model PaymentSetting {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model RobuxOrder {
+  id             String   @id @default(cuid())
+  userId         String
+  packageId      String
+  robuxAmount    Int
+  paymentMethod  String
+  transactionId  String?
+  proofImage     String?
+  robloxUsername String
+  status         String   @default("pending_payment") // "pending_payment" | "under_review" | "processing" | "delivered" | "cancelled"
+  total          Float
+  adminNote      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user    User         @relation(fields: [userId], references: [id])
+  package RobuxPackage @relation(fields: [packageId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Order {
+  id             String   @id @default(cuid())
+  userId         String
+  productId      String
+  paymentMethod  String
+  transactionId  String?
+  proofImage     String?
+  status         String   @default("pending_payment")
+  deliveryStatus String   @default("pending")
+  total          Float
+  adminNote      String?
+  pointsEarned   Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id])
+  product Product  @relation(fields: [productId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Review {
+  id               String   @id @default(cuid())
+  userId           String
+  productId        String
+  rating           Int
+  review           String
+  verifiedPurchase Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  user    User     @relation(fields: [userId], references: [id])
+  product Product  @relation(fields: [productId], references: [id])
+
+  @@index([productId])
+  @@index([userId])
+}
+
+model PointTransaction {
+  id        String   @id @default(cuid())
+  userId    String
+  amount    Int      // positive = earned, negative = spent
+  type      String   // "purchase_earn" | "referral_earn" | "admin_adjust" | "redemption" | "signup_bonus"
+  reference String?  // orderId or referral info
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([type])
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  type      String   @default("info") // "info" | "promo" | "warning" | "update"
+  active    Boolean  @default(true)
+  startDate DateTime @default(now())
+  endDate   DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([active])
+}
+
+model SupportTicket {
+  id        String   @id @default(cuid())
+  userId    String
+  subject   String
+  status    String   @default("open")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User            @relation(fields: [userId], references: [id])
+  messages TicketMessage[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model TicketMessage {
+  id        String   @id @default(cuid())
+  ticketId  String
+  senderId  String
+  message   String
+  isAdmin   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id])
+
+  @@index([ticketId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  body      String
+  read      Boolean  @default(false)
+  type      String   @default("info")
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([read])
+}
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@unique([userId, productId])
+}
