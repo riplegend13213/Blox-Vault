@@ -74,8 +74,8 @@ export async function POST(request: Request) {
     const uniquePrefix = Date.now() + '-' + Math.random().toString(36).slice(2)
     const filename = uniquePrefix + ext
 
-    // Ensure uploads directory exists
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads')
+    // Use a writable directory in deployment environments like Render/Vercel
+    const uploadsDir = process.env.UPLOADS_DIR || path.join('/tmp', 'uploads')
     await mkdir(uploadsDir, { recursive: true })
 
     // Save file
@@ -83,8 +83,8 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(await file.arrayBuffer())
     await writeFile(filePath, buffer)
 
-    // Return public URL path
-    const publicUrl = `/uploads/${filename}`
+    // Return the API route URL for the uploaded file
+    const publicUrl = `/api/uploads/${filename}`
 
     return NextResponse.json({
       success: true,
