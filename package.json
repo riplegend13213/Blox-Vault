@@ -12,8 +12,6 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset",
-    "postinstall": "prisma generate",
-    "build": "prisma generate && next build"
 }
   },
   "dependencies": {
