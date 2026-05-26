@@ -19,3 +19,17 @@ export function getSupabasePublicUrl(filename: string) {
 }
 
 export const supabaseBucket = SUPABASE_BUCKET
+
+// Expose the raw key for runtime diagnostics (do NOT log full key in production)
+export const supabaseKey = SUPABASE_KEY
+
+// Validate common misconfiguration patterns for helpful errors
+export function validateSupabaseKey(key?: string) {
+  if (!key) return { ok: false, reason: 'missing' }
+  const trimmed = key.trim()
+  if (trimmed.length === 0) return { ok: false, reason: 'empty' }
+  if (/^\".*\"$/.test(key) || /^'.*'$/.test(key)) return { ok: false, reason: 'surrounding-quotes' }
+  if (/\s/.test(key)) return { ok: false, reason: 'contains-whitespace' }
+  if (/your-|anon|public/.test(key.toLowerCase())) return { ok: false, reason: 'placeholder-or-anon' }
+  return { ok: true }
+}

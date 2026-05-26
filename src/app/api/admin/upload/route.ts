@@ -3,7 +3,7 @@ import { cookies } from 'next/headers'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 import { db } from '@/lib/db'
-import { supabase, supabaseBucket, getSupabasePublicUrl, isSupabaseEnabled } from '@/lib/supabase'
+import { supabase, supabaseBucket, getSupabasePublicUrl, isSupabaseEnabled, supabaseKey, validateSupabaseKey } from '@/lib/supabase'
 
 const ALLOWED_TYPES = ['image/jpg', 'image/jpeg', 'image/png', 'image/gif', 'image/webp']
 const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
@@ -78,13 +78,35 @@ export async function POST(request: Request) {
     let publicUrl: string
 
     if (isSupabaseEnabled && supabase) {
+      const keyCheck = validateSupabaseKey(supabaseKey)
+      if (!keyCheck.ok) {
+        const hint = {
+          missing: 'SUPABASE_SERVICE_ROLE_KEY or SUPABASE_ANON_KEY is not set',
+          empty: 'Supabase key is empty',
+          'surrounding-quotes': 'Remove surrounding quotes from the env var value',
+          'contains-whitespace': 'Supabase key contains whitespace/newlines',
+          'placeholder-or-anon': 'You are using a placeholder or anon/public key; use the Service Role key for server uploads',
+        }[keyCheck.reason as keyof typeof hint] ?? 'Invalid Supabase key'
+
+        console.error('Supabase key validation failed:', keyCheck.reason)
+        return NextResponse.json(
+          { success: false, error: `Supabase key invalid: ${hint}` },
+          { status: 500 }
+        )
+      }
+
       const buffer = Buffer.from(await file.arrayBuffer())
       const { error: uploadError } = await supabase.storage
         .from(supabaseBucket)
         .upload(filename, buffer, { contentType: file.type })
 
       if (uploadError) {
-        console.error('Supabase upload failed:', uploadError)
+        // Mask the key when logging to avoid leaking secrets
+        let masked = 'unknown'
+        try {
+          if (supabaseKey) masked = `${supabaseKey.slice(0, 6)}...${supabaseKey.slice(-6)}`
+        } catch (e) {}
+        console.error('Supabase upload failed:', uploadError, 'maskedKey=', masked)
         return NextResponse.json(
           { success: false, error: 'Failed to upload file to Supabase' },
           { status: 500 }
