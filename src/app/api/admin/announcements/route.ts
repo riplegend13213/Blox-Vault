@@ -4,13 +4,23 @@ import { z } from 'zod'
 import { zodFirstError } from '@/lib/validation'
 import { db } from '@/lib/db'
 
+import { verifySession, isSessionSigningEnabled } from '@/lib/session'
+
 async function requireAdmin() {
   const cookieStore = await cookies()
-  const session = cookieStore.get('bv_session')
-  if (!session) return null
+  const raw = cookieStore.get('bv_session')
+  if (!raw) return null
+  const sessionValue = (raw as any)?.value ?? raw
+
+  let userId = String(sessionValue)
+  if (isSessionSigningEnabled) {
+    const verified = verifySession(String(sessionValue))
+    if (!verified) return null
+    userId = verified
+  }
 
   const user = await db.user.findUnique({
-    where: { id: session.value },
+    where: { id: userId },
     select: { id: true, role: true, banned: true },
   })
 
