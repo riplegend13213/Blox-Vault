@@ -3,18 +3,37 @@ import type { NextRequest } from 'next/server'
 
 export function middleware(request: NextRequest) {
   try {
-    const session = request.cookies.get('bv_session')
-    if (!session) return NextResponse.next()
+    const rawSession = request.cookies.get('bv_session')
+    if (!rawSession) return NextResponse.next()
+
+    // rawSession may be a string or a Cookie object depending on runtime
+    const sessionValue = (rawSession as any)?.value ?? rawSession
+    if (!sessionValue) return NextResponse.next()
 
     const isProd = process.env.NODE_ENV === 'production'
     const res = NextResponse.next()
 
-    // refresh session cookie expiry on each request
-    res.cookies.set('bv_session', String(session), {
+    // Read remember flag to decide expiry to preserve user's choice
+    const rawRemember = request.cookies.get('bv_remember')
+    const rememberValue = (rawRemember as any)?.value ?? rawRemember
+    const remember = rememberValue === '1'
+    const maxAge = remember ? 60 * 60 * 24 * 30 : 60 * 60 * 24 * 7
+
+    // refresh session cookie expiry on each request (preserve remember)
+    res.cookies.set('bv_session', String(sessionValue), {
       httpOnly: true,
       secure: isProd,
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge,
+      path: '/',
+    })
+
+    // also refresh the bv_remember cookie expiry (non-httpOnly)
+    res.cookies.set('bv_remember', remember ? '1' : '0', {
+      httpOnly: false,
+      secure: isProd,
+      sameSite: 'lax',
+      maxAge,
       path: '/',
     })
 

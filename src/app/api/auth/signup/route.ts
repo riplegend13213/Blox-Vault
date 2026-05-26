@@ -74,6 +74,15 @@ export async function POST(request: Request) {
       path: '/',
     })
 
+    // default to not remembering on signup unless user explicitly requests it
+    response.cookies.set('bv_remember', '0', {
+      httpOnly: false,
+      secure: isProd,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7,
+      path: '/',
+    })
+
     return response
   } catch (error) {
     console.error('Signup error:', error)

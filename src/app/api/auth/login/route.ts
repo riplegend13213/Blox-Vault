@@ -46,6 +46,16 @@ export async function POST(request: Request) {
       path: '/',
     })
 
+    // Persist remember preference in a separate cookie so middleware can
+    // preserve session expiry without reading cookie metadata.
+    response.cookies.set('bv_remember', remember ? '1' : '0', {
+      httpOnly: false,
+      secure: isProd,
+      sameSite: 'lax',
+      maxAge,
+      path: '/',
+    })
+
     return response
   } catch (error) {
     console.error('Login error:', error)
