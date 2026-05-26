@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "prisma generate && next build",
+    "build": "node ./scripts/prebuild.js && prisma generate && next build",
     "start": "next start",
     "lint": "eslint .",
     "db:seed": "node ./scripts/seed-admin.js",
@@ -12,7 +12,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset",
-    "postinstall": "prisma generate"
+    "postinstall": "node ./scripts/postinstall.js"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -77,8 +77,10 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
+    "@types/node": "25.9.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^16.6.1",
     "eslint": "^9",
     "eslint-config-next": "^16.1.1",
     "prisma": "^6.11.1",
