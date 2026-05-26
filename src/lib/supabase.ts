@@ -1,0 +1,21 @@
+import { createClient } from '@supabase/supabase-js'
+
+const SUPABASE_URL = process.env.SUPABASE_URL
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_ANON_KEY
+const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET ?? 'uploads'
+
+export const isSupabaseEnabled = Boolean(SUPABASE_URL && SUPABASE_KEY)
+
+export const supabase = isSupabaseEnabled
+  ? createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: { persistSession: false },
+      global: { headers: { 'X-Client-Info': 'BloxVault' } },
+    })
+  : null
+
+export function getSupabasePublicUrl(filename: string) {
+  if (!SUPABASE_URL) return ''
+  return `${SUPABASE_URL.replace(/\/$/, '')}/storage/v1/object/public/${SUPABASE_BUCKET}/${encodeURIComponent(filename)}`
+}
+
+export const supabaseBucket = SUPABASE_BUCKET

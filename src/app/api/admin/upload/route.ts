@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 import { db } from '@/lib/db'
+import { supabase, supabaseBucket, getSupabasePublicUrl, isSupabaseEnabled } from '@/lib/supabase'
 
 const ALLOWED_TYPES = ['image/jpg', 'image/jpeg', 'image/png', 'image/gif', 'image/webp']
 const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
@@ -74,17 +75,35 @@ export async function POST(request: Request) {
     const uniquePrefix = Date.now() + '-' + Math.random().toString(36).slice(2)
     const filename = uniquePrefix + ext
 
-    // Use a writable directory in deployment environments like Render/Vercel
-    const uploadsDir = process.env.UPLOADS_DIR || path.join('/tmp', 'uploads')
-    await mkdir(uploadsDir, { recursive: true })
+    let publicUrl: string
 
-    // Save file
-    const filePath = path.join(uploadsDir, filename)
-    const buffer = Buffer.from(await file.arrayBuffer())
-    await writeFile(filePath, buffer)
+    if (isSupabaseEnabled && supabase) {
+      const buffer = Buffer.from(await file.arrayBuffer())
+      const { error: uploadError } = await supabase.storage
+        .from(supabaseBucket)
+        .upload(filename, buffer, { contentType: file.type })
 
-    // Return the API route URL for the uploaded file
-    const publicUrl = `/api/uploads/${filename}`
+      if (uploadError) {
+        console.error('Supabase upload failed:', uploadError)
+        return NextResponse.json(
+          { success: false, error: 'Failed to upload file to Supabase' },
+          { status: 500 }
+        )
+      }
+
+      publicUrl = getSupabasePublicUrl(filename)
+    } else {
+      // Use a writable directory in deployment environments like Render/Vercel
+      const uploadsDir = process.env.UPLOADS_DIR || path.join('/tmp', 'uploads')
+      await mkdir(uploadsDir, { recursive: true })
+
+      // Save file locally
+      const filePath = path.join(uploadsDir, filename)
+      const buffer = Buffer.from(await file.arrayBuffer())
+      await writeFile(filePath, buffer)
+
+      publicUrl = `/api/uploads/${filename}`
+    }
 
     return NextResponse.json({
       success: true,
