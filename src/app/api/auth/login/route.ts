@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
 import { authenticateUser } from '@/lib/auth'
+import { isSessionSigningEnabled, signSession } from '@/lib/session'
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -38,7 +39,9 @@ export async function POST(request: Request) {
     const isProd = process.env.NODE_ENV === 'production'
     const maxAge = remember ? 60 * 60 * 24 * 30 : 60 * 60 * 24 * 7 // 30 days vs 7 days
 
-    response.cookies.set('bv_session', user.id, {
+    const sessionValue = isSessionSigningEnabled ? signSession(user.id) : user.id
+
+    response.cookies.set('bv_session', sessionValue, {
       httpOnly: true,
       secure: isProd,
       sameSite: 'lax',

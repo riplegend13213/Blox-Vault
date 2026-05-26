@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createUser, getUserByEmail, getUserByUsername } from '@/lib/auth'
+import { isSessionSigningEnabled, signSession } from '@/lib/session'
 
 const signupSchema = z.object({
   username: z
@@ -66,7 +67,9 @@ export async function POST(request: Request) {
 
     // Auto-login after signup
     const isProd = process.env.NODE_ENV === 'production'
-    response.cookies.set('bv_session', user.id, {
+    const sessionValue = isSessionSigningEnabled ? signSession(user.id) : user.id
+
+    response.cookies.set('bv_session', sessionValue, {
       httpOnly: true,
       secure: isProd,
       sameSite: 'lax',

@@ -10,6 +10,8 @@ export function middleware(request: NextRequest) {
     const sessionValue = (rawSession as any)?.value ?? rawSession
     if (!sessionValue) return NextResponse.next()
 
+    // Keep the exact session cookie value (signed or raw) and refresh expiry
+
     const isProd = process.env.NODE_ENV === 'production'
     const res = NextResponse.next()
 
