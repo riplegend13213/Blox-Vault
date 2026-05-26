@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
+import { zodFirstError } from '@/lib/validation'
 import { db } from '@/lib/db'
 
 async function requireAdmin() {
@@ -38,10 +39,7 @@ export async function POST(request: Request) {
     const parsed = createFlashDealSchema.safeParse(body)
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, error: parsed.error.errors[0].message },
-        { status: 400 }
-      )
+      return NextResponse.json({ success: false, error: zodFirstError(parsed.error) }, { status: 400 })
     }
 
     const { productId, discountPrice, endsAt } = parsed.data
@@ -122,10 +120,7 @@ export async function PATCH(request: Request) {
     const parsed = updateFlashDealSchema.safeParse(body)
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, error: parsed.error.errors[0].message },
-        { status: 400 }
-      )
+      return NextResponse.json({ success: false, error: zodFirstError(parsed.error) }, { status: 400 })
     }
 
     const { productId, discountPrice, ...updateData } = parsed.data
@@ -203,10 +198,7 @@ export async function DELETE(request: Request) {
     const parsed = deleteFlashDealSchema.safeParse(body)
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, error: parsed.error.errors[0].message },
-        { status: 400 }
-      )
+      return NextResponse.json({ success: false, error: zodFirstError(parsed.error) }, { status: 400 })
     }
 
     const { productId } = parsed.data

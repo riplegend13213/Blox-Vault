@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
+import { zodFirstError } from '@/lib/validation'
 import { db } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 
@@ -139,10 +140,7 @@ export async function PATCH(request: Request) {
     const parsed = updateOrderAdminSchema.safeParse(body)
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, error: parsed.error.errors[0].message },
-        { status: 400 }
-      )
+      return NextResponse.json({ success: false, error: zodFirstError(parsed.error) }, { status: 400 })
     }
 
     const { orderId, ...updateData } = parsed.data

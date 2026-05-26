@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
+import { zodFirstError } from '@/lib/validation'
 import { db } from '@/lib/db'
 
 async function getAuthUser() {
@@ -86,10 +87,7 @@ export async function POST(request: Request) {
     const parsed = createOrderSchema.safeParse(body)
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, error: parsed.error.errors[0].message },
-        { status: 400 }
-      )
+      return NextResponse.json({ success: false, error: zodFirstError(parsed.error) }, { status: 400 })
     }
 
     const { productId, paymentMethod, transactionId } = parsed.data

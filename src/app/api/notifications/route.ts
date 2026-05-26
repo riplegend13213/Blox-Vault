@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
+import { zodFirstError } from '@/lib/validation'
 import { db } from '@/lib/db'
 
 async function getAuthUser() {
@@ -70,10 +71,7 @@ export async function PATCH(request: Request) {
     const parsed = markReadSchema.safeParse(body)
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, error: parsed.error.errors[0].message },
-        { status: 400 }
-      )
+      return NextResponse.json({ success: false, error: zodFirstError(parsed.error) }, { status: 400 })
     }
 
     const { notificationIds, markAll } = parsed.data
