@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "node ./scripts/prebuild.js && prisma generate && next build",
+    "build": "node ./scripts/prebuild.js && prisma generate && next build && node ./scripts/postbuild.js",
     "start": "node ./scripts/start.js",
     "lint": "eslint .",
     "db:seed": "node ./scripts/seed-admin.js",
