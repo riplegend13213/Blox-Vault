@@ -139,7 +139,7 @@ export function AdminAnnouncementsView() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: announcement.id,
+          announcementId: announcement.id,
           active: !announcement.active,
         }),
       })
@@ -160,7 +160,7 @@ export function AdminAnnouncementsView() {
       const res = await fetch('/api/admin/announcements', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ announcementId: id }),
       })
       if (!res.ok) {
         const err = await res.json()
@@ -215,7 +215,7 @@ export function AdminAnnouncementsView() {
       }
 
       if (editingAnnouncement) {
-        payload.id = editingAnnouncement.id
+          payload.announcementId = editingAnnouncement.id
         const res = await fetch('/api/admin/announcements', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
