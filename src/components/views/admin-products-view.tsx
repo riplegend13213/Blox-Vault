@@ -113,6 +113,10 @@ export function AdminProductsView() {
   const [form, setForm] = useState<ProductFormData>(emptyForm)
   const [saving, setSaving] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [discountOpen, setDiscountOpen] = useState(false)
+  const [discountProduct, setDiscountProduct] = useState<Product | null>(null)
+  const [discountPercent, setDiscountPercent] = useState<number>(0)
+  const [discountExpiresAt, setDiscountExpiresAt] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { data: productsData, isLoading } = useQuery({
@@ -318,6 +322,47 @@ export function AdminProductsView() {
     }
   }
 
+  const openDiscountModal = (product: Product) => {
+    setDiscountProduct(product)
+    setDiscountPercent(0)
+    setDiscountExpiresAt('')
+    setDiscountOpen(true)
+  }
+
+  const applyDiscount = async () => {
+    if (!discountProduct) return
+    try {
+      const res = await fetch('/api/admin/products/discount', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId: discountProduct.id, discountPercent, expiresAt: discountExpiresAt || null }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.success) throw new Error(json.error || 'Failed to apply discount')
+      toast.success('Discount applied')
+      setDiscountOpen(false)
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] })
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to apply discount')
+    }
+  }
+
+  const removeDiscount = async (product: Product) => {
+    try {
+      const res = await fetch('/api/admin/products/discount', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId: product.id }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.success) throw new Error(json.error || 'Failed to remove discount')
+      toast.success('Discount removed')
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] })
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to remove discount')
+    }
+  }
+
   if (!isAdmin) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
@@ -500,6 +545,14 @@ export function AdminProductsView() {
                                 onClick={() => openEditModal(product)}
                               >
                                 <Edit3 className="w-3.5 h-3.5 text-muted-foreground" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0"
+                                onClick={() => openDiscountModal(product)}
+                              >
+                                %
                               </Button>
                               <Button
                                 variant="ghost"
@@ -830,6 +883,45 @@ export function AdminProductsView() {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+
+        {/* Discount Modal */}
+        <Dialog open={discountOpen} onOpenChange={setDiscountOpen}>
+          <DialogContent className="max-w-lg bg-card border-border/50">
+            <DialogHeader>
+              <DialogTitle className="text-gold-gradient">Apply Discount</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div>
+                <Label className="text-xs">Product</Label>
+                <div className="text-sm font-medium">{discountProduct?.name}</div>
+              </div>
+              <div>
+                <Label className="text-xs">Discount Percent (%)</Label>
+                <Input
+                  type="number"
+                  value={discountPercent}
+                  onChange={(e) => setDiscountPercent(parseFloat(e.target.value) || 0)}
+                  min={0}
+                  max={100}
+                  className="bg-background border-border/50"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Expires At (optional)</Label>
+                <Input
+                  type="datetime-local"
+                  value={discountExpiresAt}
+                  onChange={(e) => setDiscountExpiresAt(e.target.value)}
+                  className="bg-background border-border/50"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setDiscountOpen(false)}>Cancel</Button>
+                <Button onClick={applyDiscount}>Apply</Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
     </div>
   )
 }
