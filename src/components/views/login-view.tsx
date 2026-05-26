@@ -26,6 +26,7 @@ export function LoginView() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [remember, setRemember] = useState(false)
 
   const {
     register,
@@ -47,7 +48,8 @@ export function LoginView() {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        credentials: 'include',
+        body: JSON.stringify({ ...data, remember }),
       })
 
       const result = await response.json()
@@ -171,6 +173,8 @@ export function LoginView() {
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="remember"
+                  checked={remember}
+                  onCheckedChange={(v) => setRemember(Boolean(v))}
                   className="data-[state=checked]:bg-yellow-500 data-[state=checked]:border-yellow-500"
                 />
                 <Label

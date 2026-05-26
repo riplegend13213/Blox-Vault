@@ -20,7 +20,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const { email, password } = parsed.data
+    const { email, password, remember } = parsed.data as { email: string; password: string; remember?: boolean }
     const user = await authenticateUser(email, password)
 
     if (!user) {
@@ -35,11 +35,14 @@ export async function POST(request: Request) {
       data: { user },
     })
 
+    const isProd = process.env.NODE_ENV === 'production'
+    const maxAge = remember ? 60 * 60 * 24 * 30 : 60 * 60 * 24 * 7 // 30 days vs 7 days
+
     response.cookies.set('bv_session', user.id, {
       httpOnly: true,
-      secure: false,
+      secure: isProd,
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge,
       path: '/',
     })
 

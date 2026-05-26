@@ -65,9 +65,10 @@ export async function POST(request: Request) {
     })
 
     // Auto-login after signup
+    const isProd = process.env.NODE_ENV === 'production'
     response.cookies.set('bv_session', user.id, {
       httpOnly: true,
-      secure: false,
+      secure: isProd,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7,
       path: '/',
