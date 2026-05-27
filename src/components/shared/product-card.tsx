@@ -27,6 +27,7 @@ interface ProductCardProps {
     stock: number
     priceBdt: number
     priceCrypto: number | null
+    originalPrice?: number | null
     rarity: string | null
     featured: boolean
     images?: string
@@ -73,6 +74,17 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
               <Badge className="bg-gold text-gold-foreground text-[10px] font-semibold">
                 Featured
               </Badge>
+            )}
+            {/* Discount badge when originalPrice present */}
+            {product.originalPrice && product.originalPrice > product.priceBdt && (
+              (() => {
+                const discount = Math.round(((product.originalPrice - product.priceBdt) / product.originalPrice) * 100)
+                return (
+                  <Badge className="bg-red-500 text-white text-[11px] font-bold">
+                    -{discount}%
+                  </Badge>
+                )
+              })()
             )}
             {product.rarity && (
               <Badge variant="outline" className={`text-[10px] bg-background/60 backdrop-blur-sm ${RARITY_TEXT_COLORS[product.rarity] || ''}`}>
@@ -150,7 +162,12 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
           {/* Price */}
           <div className="flex items-center justify-between">
             <div>
-              <span className="text-lg font-bold text-gold">{formatPrice(product.priceBdt)}</span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-lg font-bold text-gold">{formatPrice(product.priceBdt)}</span>
+                {product.originalPrice && product.originalPrice > product.priceBdt && (
+                  <span className="text-xs text-muted-foreground line-through">{formatPrice(product.originalPrice)}</span>
+                )}
+              </div>
               {product.priceCrypto && (
                 <span className="text-xs text-muted-foreground ml-2">
                   {formatCryptoPrice(product.priceCrypto)} USDT

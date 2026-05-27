@@ -33,6 +33,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import {
@@ -89,6 +90,7 @@ interface RobuxOrder {
   transactionId: string | null
   proofImage: string | null
   robloxUsername: string
+  friendRequestSent: boolean
   status: string
   total: number
   adminNote: string | null
@@ -701,6 +703,10 @@ export function AdminRobuxView() {
                     <p className="text-sm font-medium text-gold">{selectedOrder.robloxUsername}</p>
                   </div>
                   <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">Friend Request Sent</p>
+                    <p className="text-sm font-medium">{selectedOrder.friendRequestSent ? 'Yes' : 'No'}</p>
+                  </div>
+                  <div>
                     <p className="text-xs text-muted-foreground mb-0.5">Package</p>
                     <p className="text-sm font-medium">{selectedOrder.package?.name || 'N/A'}</p>
                   </div>
@@ -1009,12 +1015,30 @@ function PaymentSettingsForm() {
         <Input value={values['bkash_number'] ?? data?.['bkash_number'] ?? ''} onChange={(e) => handleChange('bkash_number', e.target.value)} className="bg-background" />
       </div>
       <div>
+        <Label className="text-xs">Show Owner Busy Notice</Label>
+        <div className="flex items-center gap-3">
+          <Switch
+            checked={(values['show_owner_busy_notice'] ?? data?.['show_owner_busy_notice'] ?? 'false') === 'true'}
+            onCheckedChange={(val) => handleChange('show_owner_busy_notice', val ? 'true' : 'false')}
+          />
+          <span className="text-sm text-muted-foreground">When enabled, customers see a short notice after placing an order.</span>
+        </div>
+      </div>
+      <div>
+        <Label className="text-xs">Owner Busy Notice Text</Label>
+        <Textarea value={values['owner_busy_notice_text'] ?? data?.['owner_busy_notice_text'] ?? ''} onChange={(e) => handleChange('owner_busy_notice_text', e.target.value)} className="bg-background" placeholder="Optional: custom message shown to customers after ordering." />
+      </div>
+      <div>
         <Label className="text-xs">Rocket Number</Label>
         <Input value={values['rocket_number'] ?? data?.['rocket_number'] ?? ''} onChange={(e) => handleChange('rocket_number', e.target.value)} className="bg-background" />
       </div>
       <div>
         <Label className="text-xs">Nagad Number</Label>
         <Input value={values['nagad_number'] ?? data?.['nagad_number'] ?? ''} onChange={(e) => handleChange('nagad_number', e.target.value)} className="bg-background" />
+      </div>
+      <div>
+        <Label className="text-xs">Roblox Seller Username</Label>
+        <Input value={values['roblox_seller_username'] ?? data?.['roblox_seller_username'] ?? ''} onChange={(e) => handleChange('roblox_seller_username', e.target.value)} className="bg-background" />
       </div>
       <Separator />
       <div>

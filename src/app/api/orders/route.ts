@@ -31,6 +31,8 @@ const createOrderSchema = z.object({
     'ltc',
   ]),
   transactionId: z.string().optional(),
+  robloxUsername: z.string().min(1, 'Roblox username is required'),
+  friendRequestSent: z.boolean().refine((v) => v === true, 'You must send a friend request to the seller before purchasing'),
 })
 
 export async function GET() {
@@ -90,7 +92,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: zodFirstError(parsed.error) }, { status: 400 })
     }
 
-    const { productId, paymentMethod, transactionId } = parsed.data
+    const { productId, paymentMethod, transactionId, robloxUsername, friendRequestSent } = parsed.data
 
     // Verify product exists and is active
     const product = await db.product.findUnique({
@@ -117,6 +119,8 @@ export async function POST(request: Request) {
         productId,
         paymentMethod,
         transactionId: transactionId || null,
+        robloxUsername,
+        friendRequestSent,
         total: product.priceBdt,
         status: 'pending_payment',
         deliveryStatus: 'pending',

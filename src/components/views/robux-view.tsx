@@ -69,6 +69,7 @@ export function RobuxView() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('bkash')
   const [transactionId, setTransactionId] = useState('')
   const [robloxUsername, setRobloxUsername] = useState('')
+  const [friendRequestSent, setFriendRequestSent] = useState(false)
   const [proofFile, setProofFile] = useState<File | null>(null)
 
   // Fetch robux packages
@@ -112,10 +113,14 @@ export function RobuxView() {
       if (paymentSettingsData['btc_address']) methods.crypto = methods.crypto.map((m: any) => m.id === 'btc' ? { ...m, address: paymentSettingsData['btc_address'] } : m)
       if (paymentSettingsData['eth_address']) methods.crypto = methods.crypto.map((m: any) => m.id === 'eth' ? { ...m, address: paymentSettingsData['eth_address'] } : m)
       if (paymentSettingsData['bnb_address']) methods.crypto = methods.crypto.map((m: any) => m.id === 'bnb' ? { ...m, address: paymentSettingsData['bnb_address'] } : m)
-      if (paymentSettingsData['ltc_address']) methods.crypto = methods.crypto.map((m: any) => m.id === 'ltc' ? { ...m, address: paymentSettingsData['ltc_address'] } : m)  
+      if (paymentSettingsData['ltc_address']) methods.crypto = methods.crypto.map((m: any) => m.id === 'ltc' ? { ...m, address: paymentSettingsData['ltc_address'] } : m)
     }
     return methods
   }, [paymentSettingsData])
+  const sellerRobloxUsername = paymentSettingsData?.roblox_seller_username || 'GAMER_showrov99'
+  const ownerBusyNoticeEnabled = (paymentSettingsData?.['show_owner_busy_notice'] === 'true')
+  const ownerBusyNoticeText = paymentSettingsData?.['owner_busy_notice_text'] || `If the owner is at school/college or otherwise busy delivery may be delayed. Please don't leave negative reviews or accuse of scamming — if the owner is busy they may not be able to deliver immediately.`
+  const [ownerNoticeOpen, setOwnerNoticeOpen] = useState(false)
 
   // Create robux order mutation
   const createOrderMutation = useMutation({
@@ -129,6 +134,7 @@ export function RobuxView() {
           paymentMethod: selectedPaymentMethod,
           transactionId: transactionId || undefined,
           robloxUsername,
+          friendRequestSent,
         }),
       })
       const data = await res.json()
@@ -140,7 +146,11 @@ export function RobuxView() {
         description: 'You will be notified once your payment is confirmed.',
       })
       queryClient.invalidateQueries({ queryKey: ['robux-packages'] })
-      handleCloseDialog()
+      if (ownerBusyNoticeEnabled) {
+        setOwnerNoticeOpen(true)
+      } else {
+        handleCloseDialog()
+      }
     },
     onError: (error: Error) => {
       toast.error('Failed to place order', {
@@ -166,6 +176,7 @@ export function RobuxView() {
     setSelectedPaymentMethod('bkash')
     setTransactionId('')
     setRobloxUsername('')
+    setFriendRequestSent(false)
     setProofFile(null)
     setPurchaseOpen(true)
   }
@@ -188,6 +199,12 @@ export function RobuxView() {
     if (!transactionId.trim()) {
       toast.error('Transaction ID required', {
         description: 'Please enter your transaction ID to proceed.',
+      })
+      return
+    }
+    if (!friendRequestSent) {
+      toast.error('Please confirm you have sent a friend request', {
+        description: 'Send a friend request to the seller on Roblox, then check the box to confirm.',
       })
       return
     }
@@ -542,7 +559,7 @@ export function RobuxView() {
 
               {/* Roblox Username */}
               <div className="space-y-2">
-                <label className="text-sm font-medium">
+                <label className="text-base font-semibold">
                   Roblox Username <span className="text-red-500">*</span>
                 </label>
                 <Input
@@ -551,9 +568,34 @@ export function RobuxView() {
                   onChange={(e) => setRobloxUsername(e.target.value)}
                   className="bg-background border-border/50"
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground font-medium">
                   The username where Robux will be delivered
                 </p>
+              </div>
+
+              {/* Friend request confirmation */}
+              <div className="space-y-2">
+                <label className="text-base font-semibold">Friend Request</label>
+                <div className="flex items-start gap-3">
+                  <input
+                    id="friendRequest"
+                    type="checkbox"
+                    checked={friendRequestSent}
+                    onChange={(e) => setFriendRequestSent(e.target.checked)}
+                    className="mt-1"
+                  />
+                  <div className="text-sm text-muted-foreground font-medium">
+                    <div>
+                      Send a friend request on Roblox to our delivery account
+                      {sellerRobloxUsername ? (
+                        <span className="font-medium text-gold"> @{sellerRobloxUsername}</span>
+                      ) : (
+                        <span className="font-medium text-gold"> (seller)</span>
+                      )}
+                    </div>
+                    <div>After sending the request, check the box so we can accept it and deliver Robux.</div>
+                  </div>
+                </div>
               </div>
 
               {/* Community requirement reminder in dialog */}
@@ -759,6 +801,21 @@ export function RobuxView() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Owner busy notice dialog for Robux purchases */}
+      <Dialog open={ownerNoticeOpen} onOpenChange={(open) => { setOwnerNoticeOpen(open); if (!open) { handleCloseDialog(); navigate('orders') } }}>
+        <DialogContent className="max-w-md bg-card border-border/50">
+          <DialogHeader>
+            <DialogTitle className="text-gold-gradient">Delivery Notice</DialogTitle>
+          </DialogHeader>
+          <div className="p-4">
+            <p className="text-sm text-muted-foreground mb-4">{ownerBusyNoticeText}</p>
+            <div className="flex justify-end">
+              <Button className="bg-gold hover:bg-gold/90 text-gold-foreground" onClick={() => { setOwnerNoticeOpen(false); handleCloseDialog(); navigate('orders') }}>Okay, got it</Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

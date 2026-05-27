@@ -99,6 +99,7 @@ model RobuxOrder {
   transactionId  String?
   proofImage     String?
   robloxUsername String
+  friendRequestSent Boolean  @default(false)
   status         String   @default("pending_payment") // "pending_payment" | "under_review" | "processing" | "delivered" | "cancelled"
   total          Float
   adminNote      String?
@@ -119,6 +120,8 @@ model Order {
   paymentMethod  String
   transactionId  String?
   proofImage     String?
+  robloxUsername String?
+  friendRequestSent Boolean  @default(false)
   status         String   @default("pending_payment")
   deliveryStatus String   @default("pending")
   total          Float

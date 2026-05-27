@@ -61,6 +61,7 @@ const createRobuxOrderSchema = z.object({
   ]),
   transactionId: z.string().optional(),
   robloxUsername: z.string().min(1, 'Roblox username is required'),
+  friendRequestSent: z.boolean().refine((v) => v === true, 'You must send a friend request to the seller before purchasing'),
 })
 
 // POST: Create a Robux order
@@ -103,6 +104,8 @@ export async function POST(request: Request) {
     const pointsEarned = Math.floor(total / 100)
 
     // Create order, loyalty points transaction, and notification in a transaction
+    const { friendRequestSent } = parsed.data
+
     const order = await db.$transaction(async (tx) => {
       const robuxOrder = await tx.robuxOrder.create({
         data: {
@@ -112,6 +115,7 @@ export async function POST(request: Request) {
           paymentMethod,
           transactionId: transactionId || null,
           robloxUsername,
+          friendRequestSent,
           total,
           status: 'pending_payment',
         },
