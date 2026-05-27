@@ -23,7 +23,7 @@ const createTicketSchema = z.object({
   message: z.string().min(1, 'Message is required').max(5000, 'Message must be at most 5000 characters'),
 })
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const user = await getAuthUser()
     if (!user) {
@@ -33,8 +33,56 @@ export async function GET() {
       )
     }
 
+    const url = new URL(request.url)
+    const params = url.searchParams
+    const status = params.get('status')
+    const search = params.get('search')
+    const limit = parseInt(params.get('limit') || '50', 10) || 50
+    const page = parseInt(params.get('page') || '1', 10) || 1
+    const take = Math.min(limit, 200)
+    const skip = Math.max(0, (page - 1) * take)
+
+    if (user.role === 'admin') {
+      // Admins can see all tickets; allow optional filtering & pagination
+      const where: any = {}
+      if (status && status !== 'all') where.status = status
+      if (search) {
+        where.OR = [
+          { subject: { contains: search, mode: 'insensitive' } },
+          { user: { username: { contains: search, mode: 'insensitive' } } },
+        ]
+      }
+
+      const tickets = await db.supportTicket.findMany({
+        where,
+        include: {
+          user: { select: { id: true, username: true, email: true, avatar: true } },
+          messages: {
+            select: {
+              id: true,
+              senderId: true,
+              isAdmin: true,
+              createdAt: true,
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+          },
+          _count: { select: { messages: true } },
+        },
+        orderBy: { updatedAt: 'desc' },
+        take,
+        skip,
+      })
+
+      return NextResponse.json({ success: true, data: { tickets } })
+    }
+
+    // Regular users: only their own tickets (keep previous behavior)
+    const userWhere: any = { userId: user.id }
+    if (status && status !== 'all') userWhere.status = status
+
     const tickets = await db.supportTicket.findMany({
-      where: { userId: user.id },
+      where: userWhere,
       include: {
         messages: {
           select: {
@@ -53,10 +101,7 @@ export async function GET() {
       orderBy: { updatedAt: 'desc' },
     })
 
-    return NextResponse.json({
-      success: true,
-      data: { tickets },
-    })
+    return NextResponse.json({ success: true, data: { tickets } })
   } catch (error) {
     console.error('Support tickets GET error:', error)
     return NextResponse.json(

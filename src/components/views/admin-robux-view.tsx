@@ -966,6 +966,7 @@ export function AdminRobuxView() {
 function PaymentSettingsForm() {
   const [saving, setSaving] = useState(false)
   const [values, setValues] = useState<Record<string, string>>({})
+  const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({
     queryKey: ['payment-settings'],
@@ -990,6 +991,8 @@ function PaymentSettingsForm() {
       })
       if (!res.ok) throw new Error('Failed to save')
       toast.success('Payment settings saved')
+      // Invalidate payment settings so other views (robux, product pages) refresh
+      queryClient.invalidateQueries({ queryKey: ['payment-settings'] })
     } catch (e: any) {
       toast.error(e.message || 'Failed to save settings')
     } finally {
