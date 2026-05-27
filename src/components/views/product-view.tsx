@@ -144,6 +144,7 @@ export function ProductView() {
     return methods
   }, [paymentSettingsData])
   const sellerRobloxUsername = paymentSettingsData?.roblox_seller_username || 'GAMER_showrov99'
+  const sellerDiscordUsername = paymentSettingsData?.discord_seller_username || 'showrov_gamer'
 
   // Fetch reviews
   const {
@@ -794,6 +795,9 @@ export function ProductView() {
                         <p className="font-semibold">Discord</p>
                         <p className="text-xs text-muted-foreground mt-1">
                           Send a friend request on Roblox and share your username so we can accept it.
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          My Discord: <span className="font-semibold text-gold">{sellerDiscordUsername}</span>
                         </p>
                       </button>
                       <button
