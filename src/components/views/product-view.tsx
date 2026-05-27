@@ -794,7 +794,7 @@ export function ProductView() {
                       >
                         <p className="font-semibold">Discord</p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Send a friend request on Roblox and share your username so we can accept it.
+                          Send a friend request on Discord and share your username so we can accept it.
                         </p>
                         <p className="text-xs text-muted-foreground mt-2">
                           My Discord: <span className="font-semibold text-gold">{sellerDiscordUsername}</span>
@@ -821,7 +821,7 @@ export function ProductView() {
                       </div>
                     ) : (
                       <div className="rounded-xl border border-border/50 bg-background p-4 text-sm text-muted-foreground">
-                        Choose Discord if you want to send a Roblox friend request. Enter both your Discord username and your Roblox username, since they are not always the same.
+                        Choose Discord if you want to send a Discord friend request. Enter both your Discord username and your Roblox username, since they are not always the same.
                       </div>
                     )}
                   </div>
@@ -847,19 +847,23 @@ export function ProductView() {
                     )}
                     <div className="space-y-2">
                       <label className="text-base font-semibold">
-                        Roblox Username <span className="text-red-500">*</span>
-                      </label>
-                      <Input
-                        placeholder="Enter your Roblox username"
-                        value={robloxUsername}
-                        onChange={(e) => setRobloxUsername(e.target.value)}
-                        className="bg-background border-border/50"
-                      />
-                      <p className="text-sm text-muted-foreground font-medium">
-                        Enter the Roblox username where the friend request was sent.
-                      </p>
+                        Roblox Username{" "}
+                        {product.category !== 'account' && (
+                         <span className="text-red-500">*</span>
+                     )}
+                     </label>
+                     <Input
+                      placeholder="Enter your Roblox username"
+                      value={robloxUsername}
+                      onChange={(e) => setRobloxUsername(e.target.value)}
+                      className="bg-background border-border/50"
+                     />
+                     <p className="text-sm text-muted-foreground font-medium">
+                       {product.category === 'account'
+                       ? 'Optional for account orders.'
+                       : 'Enter the Roblox username where the friend request was sent.'}
+                     </p>
                     </div>
-
                     <div className="space-y-2">
                       <label className="text-base font-semibold">Friend Request Confirmation</label>
                       <div className="flex items-start gap-3">
