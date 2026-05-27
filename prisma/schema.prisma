@@ -121,7 +121,10 @@ model Order {
   transactionId  String?
   proofImage     String?
   robloxUsername String?
+  discordUsername String?
   friendRequestSent Boolean  @default(false)
+  accountDeliveryMethod String?
+  supportTicketId String?
   status         String   @default("pending_payment")
   deliveryStatus String   @default("pending")
   total          Float

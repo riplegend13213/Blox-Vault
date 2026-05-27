@@ -31,8 +31,10 @@ const createOrderSchema = z.object({
     'ltc',
   ]),
   transactionId: z.string().optional(),
-  robloxUsername: z.string().min(1, 'Roblox username is required'),
-  friendRequestSent: z.boolean().refine((v) => v === true, 'You must send a friend request to the seller before purchasing'),
+  robloxUsername: z.string().optional(),
+  discordUsername: z.string().optional(),
+  friendRequestSent: z.boolean().optional(),
+  accountDeliveryMethod: z.enum(['discord', 'support_ticket']).optional(),
 })
 
 export async function GET() {
@@ -92,7 +94,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: zodFirstError(parsed.error) }, { status: 400 })
     }
 
-    const { productId, paymentMethod, transactionId, robloxUsername, friendRequestSent } = parsed.data
+    const { productId, paymentMethod, transactionId, robloxUsername, discordUsername, friendRequestSent, accountDeliveryMethod } = parsed.data
 
     // Verify product exists and is active
     const product = await db.product.findUnique({
@@ -113,14 +115,63 @@ export async function POST(request: Request) {
       )
     }
 
+    const effectiveDeliveryMethod = product.category === 'account'
+      ? accountDeliveryMethod || 'discord'
+      : 'discord'
+
+    if (product.category === 'account' && effectiveDeliveryMethod === 'discord') {
+      if (!discordUsername || !discordUsername.trim()) {
+        return NextResponse.json(
+          { success: false, error: 'Discord username is required for Discord delivery' },
+          { status: 400 }
+        )
+      }
+      if (!robloxUsername || !robloxUsername.trim()) {
+        return NextResponse.json(
+          { success: false, error: 'Roblox username is required for Discord delivery' },
+          { status: 400 }
+        )
+      }
+      if (!friendRequestSent) {
+        return NextResponse.json(
+          { success: false, error: 'You must send a friend request to the seller before purchasing' },
+          { status: 400 }
+        )
+      }
+    }
+
+    let supportTicket: { id: string } | null = null
+
+    if (product.category === 'account' && effectiveDeliveryMethod === 'support_ticket') {
+      supportTicket = await db.supportTicket.create({
+        data: {
+          userId: user.id,
+          subject: `Account order support: ${product.name}`,
+          status: 'open',
+        },
+      })
+
+      await db.ticketMessage.create({
+        data: {
+          ticketId: supportTicket.id,
+          senderId: user.id,
+          message: `I placed an order for ${product.name}. Payment method: ${paymentMethod}. Transaction ID: ${transactionId || 'N/A'}. Discord: ${discordUsername || 'N/A'}. Please assist with account delivery.`,
+          isAdmin: false,
+        },
+      })
+    }
+
     const order = await db.order.create({
       data: {
         userId: user.id,
         productId,
         paymentMethod,
         transactionId: transactionId || null,
-        robloxUsername,
-        friendRequestSent,
+        robloxUsername: robloxUsername || null,
+        discordUsername: discordUsername || null,
+        friendRequestSent: friendRequestSent || false,
+        accountDeliveryMethod: product.category === 'account' ? effectiveDeliveryMethod : null,
+        supportTicketId: supportTicket?.id || null,
         total: product.priceBdt,
         status: 'pending_payment',
         deliveryStatus: 'pending',

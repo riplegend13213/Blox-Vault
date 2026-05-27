@@ -86,7 +86,9 @@ export function ProductView() {
   const [transactionId, setTransactionId] = useState('')
   const [proofFile, setProofFile] = useState<File | null>(null)
   const [robloxUsername, setRobloxUsername] = useState('')
+  const [discordUsername, setDiscordUsername] = useState('')
   const [friendRequestSent, setFriendRequestSent] = useState(false)
+  const [accountDeliveryMethod, setAccountDeliveryMethod] = useState<'discord' | 'support_ticket'>('discord')
 
   // Image gallery state
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
@@ -192,7 +194,9 @@ export function ProductView() {
           paymentMethod: selectedPaymentMethod,
           transactionId: transactionId || undefined,
           robloxUsername,
+          discordUsername,
           friendRequestSent,
+          accountDeliveryMethod: product?.category === 'account' ? accountDeliveryMethod : undefined,
         }),
       })
       const data = await res.json()
@@ -261,6 +265,21 @@ export function ProductView() {
       })
       return
     }
+
+    if (product.category === 'account' && accountDeliveryMethod === 'support_ticket') {
+      createOrderMutation.mutate()
+      return
+    }
+
+    if (product.category === 'account' && accountDeliveryMethod === 'discord') {
+      if (!discordUsername.trim()) {
+        toast.error('Discord username required', {
+          description: 'Enter the Discord username where we should contact you.',
+        })
+        return
+      }
+    }
+
     if (!robloxUsername.trim()) {
       toast.error('Roblox username required', {
         description: 'Enter the Roblox username where the request was sent.',
@@ -759,37 +778,102 @@ export function ProductView() {
                   </p>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-base font-semibold">
-                    Roblox Username <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    placeholder="Enter your Roblox username"
-                    value={robloxUsername}
-                    onChange={(e) => setRobloxUsername(e.target.value)}
-                    className="bg-background border-border/50"
-                  />
-                  <p className="text-sm text-muted-foreground font-medium">
-                    Enter the Roblox username where the friend request was sent.
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-base font-semibold">Friend Request Confirmation</label>
-                  <div className="flex items-start gap-3">
-                    <input
-                      id="friendRequest"
-                      type="checkbox"
-                      checked={friendRequestSent}
-                      onChange={(e) => setFriendRequestSent(e.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-border/50 text-gold focus:ring-gold"
-                    />
-                    <div className="text-sm text-muted-foreground font-medium">
-                      Send a friend request to <span className="font-semibold text-gold">{sellerRobloxUsername}</span> on Roblox before placing the order.
-                      Then check this box so we can accept it and deliver the product.
+                {product.category === 'account' && (
+                  <div className="space-y-3 rounded-xl border border-border/50 bg-background/80 p-4">
+                    <p className="text-sm font-semibold">Account Delivery Method</p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <button
+                        type="button"
+                        onClick={() => setAccountDeliveryMethod('discord')}
+                        className={`rounded-xl border p-4 text-left transition-colors ${
+                          accountDeliveryMethod === 'discord'
+                            ? 'border-gold bg-gold/10'
+                            : 'border-border/50 bg-background'
+                        }`}
+                      >
+                        <p className="font-semibold">Discord</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Send a friend request on Roblox and share your username so we can accept it.
+                        </p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAccountDeliveryMethod('support_ticket')}
+                        className={`rounded-xl border p-4 text-left transition-colors ${
+                          accountDeliveryMethod === 'support_ticket'
+                            ? 'border-gold bg-gold/10'
+                            : 'border-border/50 bg-background'
+                        }`}
+                      >
+                        <p className="font-semibold">Support Ticket</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          A support ticket will open after ordering so we can confirm and deliver your account securely.
+                        </p>
+                      </button>
                     </div>
+                    {accountDeliveryMethod === 'support_ticket' ? (
+                      <div className="rounded-xl border border-border/50 bg-background p-4 text-sm text-muted-foreground">
+                        After payment, an account support ticket will be created automatically. Our team will reach out to you there and may send login details by email once the order is confirmed.
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-border/50 bg-background p-4 text-sm text-muted-foreground">
+                        Choose Discord if you want to send a Roblox friend request. Enter both your Discord username and your Roblox username, since they are not always the same.
+                      </div>
+                    )}
                   </div>
-                </div>
+                )}
+
+                {(product.category !== 'account' || accountDeliveryMethod === 'discord') && (
+                  <>
+                    {product.category === 'account' && accountDeliveryMethod === 'discord' && (
+                      <div className="space-y-2">
+                        <label className="text-base font-semibold">
+                          Discord Username <span className="text-red-500">*</span>
+                        </label>
+                        <Input
+                          placeholder="Enter your Discord username"
+                          value={discordUsername}
+                          onChange={(e) => setDiscordUsername(e.target.value)}
+                          className="bg-background border-border/50"
+                        />
+                        <p className="text-sm text-muted-foreground font-medium">
+                          Enter the Discord username where we should contact you for this account order.
+                        </p>
+                      </div>
+                    )}
+                    <div className="space-y-2">
+                      <label className="text-base font-semibold">
+                        Roblox Username <span className="text-red-500">*</span>
+                      </label>
+                      <Input
+                        placeholder="Enter your Roblox username"
+                        value={robloxUsername}
+                        onChange={(e) => setRobloxUsername(e.target.value)}
+                        className="bg-background border-border/50"
+                      />
+                      <p className="text-sm text-muted-foreground font-medium">
+                        Enter the Roblox username where the friend request was sent.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-base font-semibold">Friend Request Confirmation</label>
+                      <div className="flex items-start gap-3">
+                        <input
+                          id="friendRequest"
+                          type="checkbox"
+                          checked={friendRequestSent}
+                          onChange={(e) => setFriendRequestSent(e.target.checked)}
+                          className="mt-1 h-4 w-4 rounded border-border/50 text-gold focus:ring-gold"
+                        />
+                        <div className="text-sm text-muted-foreground font-medium">
+                          Send a friend request to <span className="font-semibold text-gold">{sellerRobloxUsername}</span> on Roblox before placing the order.
+                          Then check this box so we can accept it and deliver the product.
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 {/* Payment Proof Upload */}
                 <div className="space-y-2">

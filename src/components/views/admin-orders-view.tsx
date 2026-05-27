@@ -88,6 +88,11 @@ interface Order {
   transactionId: string | null
   deliveryStatus: string
   adminNote: string | null
+  accountDeliveryMethod?: string | null
+  supportTicketId?: string | null
+  robloxUsername?: string | null
+  discordUsername?: string | null
+  friendRequestSent?: boolean | null
   createdAt: string
   updatedAt: string
   user: OrderUser
@@ -403,6 +408,26 @@ export function AdminOrdersView() {
                       {selectedOrder.transactionId || 'N/A'}
                     </p>
                   </div>
+                  {selectedOrder.accountDeliveryMethod && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Account Delivery</p>
+                      <p className="text-sm capitalize">
+                        {selectedOrder.accountDeliveryMethod === 'support_ticket' ? 'Support Ticket' : 'Discord'}
+                      </p>
+                    </div>
+                  )}
+                  {selectedOrder.supportTicketId && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Support Ticket</p>
+                      <p className="text-sm font-mono">{selectedOrder.supportTicketId}</p>
+                    </div>
+                  )}
+                  {selectedOrder.discordUsername && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Discord Username</p>
+                      <p className="text-sm font-medium">{selectedOrder.discordUsername}</p>
+                    </div>
+                  )}
                   <div>
                     <p className="text-xs text-muted-foreground mb-0.5">Total</p>
                     <p className="text-lg font-bold text-gold">
