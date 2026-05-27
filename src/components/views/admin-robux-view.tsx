@@ -1029,6 +1029,14 @@ function PaymentSettingsForm() {
         <Label className="text-xs">ETH Address</Label>
         <Input value={values['eth_address'] ?? data?.['eth_address'] ?? ''} onChange={(e) => handleChange('eth_address', e.target.value)} className="bg-background" />
       </div>
+      <div>
+        <Label className="text-xs">BNB (BEP20) Address</Label>
+        <Input value={values['bnb_address'] ?? data?.['bnb_address'] ?? ''} onChange={(e) => handleChange('bnb_address', e.target.value)} className="bg-background" />
+      </div>
+      <div>
+        <Label className="text-xs">LTC Address</Label>
+        <Input value={values['ltc_address'] ?? data?.['ltc_address'] ?? ''} onChange={(e) => handleChange('ltc_address', e.target.value)} className="bg-background" />
+      </div>
       <div className="flex items-center gap-2">
         <Button className="bg-gold" onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : 'Save Settings'}</Button>
       </div>

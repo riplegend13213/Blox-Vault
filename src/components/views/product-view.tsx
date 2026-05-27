@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo} from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAppStore } from '@/lib/store'
 import {
@@ -43,6 +43,24 @@ import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+interface ReviewUser {
+  id: string
+  username: string
+  email: string
+  avatar: string | null
+}
+
+interface ProductReview {
+  id: string
+  userId: string
+  productId: string
+  rating: number
+  review: string
+  verifiedPurchase: boolean
+  createdAt: string
+  updatedAt: string
+  user: ReviewUser
+}
 import {
   Dialog,
   DialogContent,
@@ -92,6 +110,31 @@ export function ProductView() {
 
   const product = productData?.data?.product
 
+  const { data: paymentSettingsData } = useQuery({
+    queryKey: ['payment-settings'],
+    queryFn: async () => {
+      const res = await fetch('/api/admin/payments')
+      if (!res.ok) return {}
+      const json = await res.json()
+      return json.data as Record<string, string>
+    },
+  })
+
+  const mergedPaymentMethods = useMemo(() => {
+    const methods = JSON.parse(JSON.stringify(PAYMENT_METHODS))
+    if (paymentSettingsData) {
+      if (paymentSettingsData['bkash_number']) methods.bdt = methods.bdt.map((m: any) => m.id === 'bkash' ? { ...m, number: paymentSettingsData['bkash_number'] } : m)
+      if (paymentSettingsData['rocket_number']) methods.bdt = methods.bdt.map((m: any) => m.id === 'rocket' ? { ...m, number: paymentSettingsData['rocket_number'] } : m)
+      if (paymentSettingsData['nagad_number']) methods.bdt = methods.bdt.map((m: any) => m.id === 'nagad' ? { ...m, number: paymentSettingsData['nagad_number'] } : m)
+      if (paymentSettingsData['usdt_address']) methods.crypto = methods.crypto.map((m: any) => m.id === 'usdt' ? { ...m, address: paymentSettingsData['usdt_address'] } : m)
+      if (paymentSettingsData['btc_address']) methods.crypto = methods.crypto.map((m: any) => m.id === 'btc' ? { ...m, address: paymentSettingsData['btc_address'] } : m)
+      if (paymentSettingsData['eth_address']) methods.crypto = methods.crypto.map((m: any) => m.id === 'eth' ? { ...m, address: paymentSettingsData['eth_address'] } : m)
+      if (paymentSettingsData['bnb_address']) methods.crypto = methods.crypto.map((m: any) => m.id === 'bnb' ? { ...m, address: paymentSettingsData['bnb_address'] } : m)
+      if (paymentSettingsData['ltc_address']) methods.crypto = methods.crypto.map((m: any) => m.id === 'ltc' ? { ...m, address: paymentSettingsData['ltc_address'] } : m)
+    }
+    return methods
+  }, [paymentSettingsData])
+
   // Fetch reviews
   const {
     data: reviewsData,
@@ -106,7 +149,7 @@ export function ProductView() {
     enabled: !!selectedProductId,
   })
 
-  const reviews = reviewsData?.data?.reviews ?? []
+   const reviews: ProductReview[] = reviewsData?.data?.reviews ?? []
 
   // Fetch related products
   const {
@@ -538,14 +581,14 @@ export function ProductView() {
                       {formatPrice(product.priceBdt)}
                     </span>
                   </div>
-                  {product.priceCrypto && (
+                  {(mergedPaymentMethods?.bdt || PAYMENT_METHODS.bdt).map((method) => (
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">Crypto equivalent</span>
                       <span className="text-sm text-muted-foreground">
                         {formatCryptoPrice(product.priceCrypto)} USDT
                       </span>
                     </div>
-                  )}
+                  ))}
                 </div>
 
                 {/* Payment Method Tabs */}
@@ -613,7 +656,7 @@ export function ProductView() {
 
                   {/* Crypto Payment Options */}
                   <TabsContent value="crypto" className="mt-3 space-y-2">
-                    {PAYMENT_METHODS.crypto.map((method) => (
+                    {(mergedPaymentMethods?.crypto || PAYMENT_METHODS.crypto).map((method) => (
                       <div key={method.id}>
                         <button
                           onClick={() => setSelectedPaymentMethod(method.id)}
@@ -926,9 +969,7 @@ export function ProductView() {
                   <Separator orientation="vertical" className="h-16 bg-border/30" />
                   <div className="flex-1 space-y-1">
                     {[5, 4, 3, 2, 1].map((star) => {
-                      const count = reviews.filter(
-                        (r: Record<string, unknown>) => (r.rating as number) === star
-                      ).length
+                      const count = reviews.filter((r: ProductReview) => r.rating === star).length
                       const pct = reviewCount > 0 ? (count / reviewCount) * 100 : 0
                       return (
                         <div key={star} className="flex items-center gap-2">
@@ -975,7 +1016,7 @@ export function ProductView() {
                 <ScrollArea className="max-h-96">
                   <div className="space-y-4 pr-4">
                     <AnimatePresence>
-                      {reviews.map((review: Record<string, unknown>, index: number) => (
+                     {reviews.map((review: ProductReview, index: number) => (
                         <motion.div
                           key={review.id as string}
                           initial={{ opacity: 0, y: 10 }}
@@ -987,7 +1028,7 @@ export function ProductView() {
                             {/* Avatar */}
                             <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center shrink-0">
                               <span className="text-sm font-semibold text-gold">
-                                {((review.user as Record<string, unknown>)?.username as string || 'U')
+                               {(review.user.username || 'U')
                                   .charAt(0)
                                   .toUpperCase()}
                               </span>
@@ -996,7 +1037,7 @@ export function ProductView() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="text-sm font-semibold">
-                                  {(review.user as Record<string, unknown>)?.username as string || 'Anonymous'}
+                                  {review.user.username || 'Anonymous'}
                                 </span>
                                 {review.verifiedPurchase && (
                                   <Badge

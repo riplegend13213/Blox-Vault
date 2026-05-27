@@ -111,6 +111,8 @@ export function RobuxView() {
       if (paymentSettingsData['usdt_address']) methods.crypto = methods.crypto.map((m: any) => m.id === 'usdt' ? { ...m, address: paymentSettingsData['usdt_address'] } : m)
       if (paymentSettingsData['btc_address']) methods.crypto = methods.crypto.map((m: any) => m.id === 'btc' ? { ...m, address: paymentSettingsData['btc_address'] } : m)
       if (paymentSettingsData['eth_address']) methods.crypto = methods.crypto.map((m: any) => m.id === 'eth' ? { ...m, address: paymentSettingsData['eth_address'] } : m)
+      if (paymentSettingsData['bnb_address']) methods.crypto = methods.crypto.map((m: any) => m.id === 'bnb' ? { ...m, address: paymentSettingsData['bnb_address'] } : m)
+      if (paymentSettingsData['ltc_address']) methods.crypto = methods.crypto.map((m: any) => m.id === 'ltc' ? { ...m, address: paymentSettingsData['ltc_address'] } : m)  
     }
     return methods
   }, [paymentSettingsData])
