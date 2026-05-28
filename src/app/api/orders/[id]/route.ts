@@ -124,13 +124,13 @@ export async function PATCH(
           title: `Payment proof uploaded — Order #${id.slice(-8)}`,
           description: `Product: ${updatedOrder.product.name}`,
           fields: [
-            { name: 'Method', value: updatedOrder.paymentMethod || 'N/A', inline: true },
+            { name: 'Method', value: (updatedOrder as any).paymentMethod || 'N/A', inline: true },
             { name: 'Customer', value: `${customer?.username ?? 'Unknown'} (${customer?.email ?? 'N/A'})`, inline: true },
-            { name: 'Discord', value: updatedOrder.discordUsername ?? 'N/A', inline: true },
-            { name: 'Roblox', value: updatedOrder.robloxUsername ?? 'N/A', inline: true },
-            ...(updatedOrder.transactionId ? [{ name: 'Transaction ID', value: updatedOrder.transactionId }] : []),
+            { name: 'Discord', value: (updatedOrder as any).discordUsername ?? 'N/A', inline: true },
+            { name: 'Roblox', value: (updatedOrder as any).robloxUsername ?? 'N/A', inline: true },
+            ...((updatedOrder as any).transactionId ? [{ name: 'Transaction ID', value: (updatedOrder as any).transactionId }] : []),
           ],
-          imageUrl: updatedOrder.proofImage || undefined,
+          imageUrl: (updatedOrder as any).proofImage || undefined,
         })
       }
 

@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { z } from 'zod'
 import { zodFirstError } from '@/lib/validation'
 import { db } from '@/lib/db'
+import { sendDiscordEmbed } from '@/lib/discord'
 
 async function getAuthUser() {
   const cookieStore = await cookies()
@@ -31,6 +32,7 @@ const createOrderSchema = z.object({
     'ltc',
   ]),
   transactionId: z.string().optional(),
+  proofImage: z.string().optional(),
   robloxUsername: z.string().optional(),
   discordUsername: z.string().optional(),
   friendRequestSent: z.boolean().optional(),
@@ -159,6 +161,7 @@ export async function POST(request: Request) {
       data: {
         userId: user.id,
         productId,
+        proofImage: parsed.data.proofImage || null,
         paymentMethod,
         transactionId: transactionId || null,
         robloxUsername: robloxUsername || null,
@@ -193,6 +196,25 @@ export async function POST(request: Request) {
         type: 'order',
       },
     })
+
+    // If transaction or proof provided at creation, send a webhook to staff
+    if (transactionId || parsed.data.proofImage) {
+      try {
+        const customer = await db.user.findUnique({ where: { id: user.id }, select: { username: true, email: true } })
+        await sendDiscordEmbed({
+          title: `New order with proof — #${order.id.slice(-8)}`,
+          description: `Product: ${product.name}`,
+          fields: [
+            { name: 'Payment Method', value: paymentMethod },
+            ...(transactionId ? [{ name: 'Transaction ID', value: transactionId }] : []),
+            { name: 'Customer', value: `${customer?.username ?? 'Unknown'} (${customer?.email ?? 'N/A'})` },
+          ],
+          imageUrl: parsed.data.proofImage || undefined,
+        })
+      } catch (e) {
+        console.error('Failed to send webhook for new order with proof:', e)
+      }
+    }
 
     return NextResponse.json(
       { success: true, data: { order } },
