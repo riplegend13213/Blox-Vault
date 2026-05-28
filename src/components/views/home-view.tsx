@@ -1312,12 +1312,6 @@ function LoyaltyProgramSection() {
                       <span className="text-gold font-semibold">$1 = 3 points</span>
                     </span>
                   </div>
-                  <div className="flex items-center justify-center gap-2">
-                    <Sparkles className="w-5 h-5 text-gold" />
-                    <span className="text-lg text-muted-foreground">
-                      <span className="text-gold font-semibold">50 Bonus Points</span> on Signup
-                    </span>
-                  </div>
                 </div>
 
                 {/* Authenticated user's points balance */}
