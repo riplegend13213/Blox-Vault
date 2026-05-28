@@ -54,6 +54,8 @@ interface Order {
   supportTicketId?: string | null
   createdAt: string
   updatedAt: string
+  pointsUsed?: number | null
+  pointsDiscount?: number | null
   product: {
     id: string
     name: string
@@ -325,6 +327,13 @@ function OrderRow({ order }: { order: Order }) {
                       >
                         {order.proofImage}
                       </a>
+                    </div>
+                  )}
+
+                  {(order.pointsUsed ?? 0) > 0 && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Points Used</p>
+                      <p className="text-sm font-medium">{order.pointsUsed ?? 0} pts (৳{order.pointsDiscount ?? order.pointsUsed ?? 0})</p>
                     </div>
                   )}
 

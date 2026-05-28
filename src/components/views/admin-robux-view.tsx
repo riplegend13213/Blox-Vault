@@ -1040,6 +1040,11 @@ function PaymentSettingsForm() {
         <Label className="text-xs">Roblox Seller Username</Label>
         <Input value={values['roblox_seller_username'] ?? data?.['roblox_seller_username'] ?? ''} onChange={(e) => handleChange('roblox_seller_username', e.target.value)} className="bg-background" />
       </div>
+      <div>
+        <Label className="text-xs">Eid Discount (BDT)</Label>
+        <Input value={values['eid_discount'] ?? data?.['eid_discount'] ?? ''} onChange={(e) => handleChange('eid_discount', e.target.value)} className="bg-background" placeholder="e.g. 50" />
+        <p className="text-xs text-muted-foreground mt-1">Set a global Eid discount amount in BDT. Leave empty to allow customers to enter custom amounts.</p>
+      </div>
       <Separator />
       <div>
         <Label className="text-xs">USDT (TRC20) Address</Label>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAppStore } from '@/lib/store'
 import {
@@ -87,6 +87,10 @@ export function ProductView() {
   const [proofFile, setProofFile] = useState<File | null>(null)
   const [robloxUsername, setRobloxUsername] = useState('')
   const [discordUsername, setDiscordUsername] = useState('')
+  const [usePoints, setUsePoints] = useState(false)
+  const [pointsToUse, setPointsToUse] = useState<number>(0)
+  const [eidApply, setEidApply] = useState(false)
+  const [eidDiscountAmount, setEidDiscountAmount] = useState<number>(0)
   const [friendRequestSent, setFriendRequestSent] = useState(false)
   const [accountDeliveryMethod, setAccountDeliveryMethod] = useState<'discord' | 'support_ticket'>('discord')
 
@@ -125,6 +129,20 @@ export function ProductView() {
     },
   })
 
+    const { data: loyaltyInfo } = useQuery({
+      queryKey: ['loyalty-balance'],
+      queryFn: async () => {
+        try {
+          const res = await fetch('/api/loyalty')
+          if (!res.ok) return null
+          const json = await res.json()
+          return json.data as { balance: number }
+        } catch {
+          return null
+        }
+      },
+    })
+
   const [ownerNoticeOpen, setOwnerNoticeOpen] = useState(false)
   const ownerBusyNoticeEnabled = (paymentSettingsData?.['show_owner_busy_notice'] === 'true')
   const ownerBusyNoticeText = paymentSettingsData?.['owner_busy_notice_text'] || `If the owner is at school/college or otherwise busy delivery may be delayed. Please don't leave negative reviews or accuse of scamming — if the owner is busy they may not be able to deliver immediately.`
@@ -160,6 +178,23 @@ export function ProductView() {
     enabled: !!selectedProductId,
   })
 
+  // Cap pointsToUse to min(balance, product.priceBdt) when user toggles or values change
+  useEffect(() => {
+    if (!usePoints) return
+    const balance = loyaltyInfo?.balance ?? 0
+    const maxAllowed = Math.min(balance, Math.floor(product?.priceBdt ?? 0))
+    if (pointsToUse > maxAllowed) setPointsToUse(maxAllowed)
+  }, [usePoints, loyaltyInfo?.balance, product?.priceBdt])
+
+  const finalPayable = (() => {
+    const price = product?.priceBdt ?? 0
+    const balance = loyaltyInfo?.balance ?? 0
+    const allowed = Math.min(balance, Math.floor(price))
+    const used = usePoints ? Math.min(pointsToUse, allowed) : 0
+    const eid = eidApply ? Math.max(0, Math.floor(eidDiscountAmount)) : 0
+    return Math.max(0, price - used - eid)
+  })()
+
   const reviews: ProductReview[] = reviewsData?.data?.reviews ?? []
 
   // Fetch related products
@@ -193,10 +228,16 @@ export function ProductView() {
         form.append('productId', String(selectedProductId))
         form.append('paymentMethod', selectedPaymentMethod)
         if (transactionId) form.append('transactionId', transactionId)
+        if (usePoints) form.append('usePoints', 'true')
+        if (pointsToUse) form.append('pointsToUse', String(pointsToUse))
         if (robloxUsername) form.append('robloxUsername', robloxUsername)
         if (discordUsername) form.append('discordUsername', discordUsername)
         form.append('friendRequestSent', String(friendRequestSent))
         if (product?.category === 'account') form.append('accountDeliveryMethod', accountDeliveryMethod)
+          if (eidApply) {
+            form.append('eidOfferApplied', 'true')
+            form.append('eidDiscountAmount', String(eidDiscountAmount))
+          }
         form.append('proof', proofFile)
         res = await fetch('/api/orders', { method: 'POST', body: form })
       } else {
@@ -211,6 +252,10 @@ export function ProductView() {
             discordUsername,
             friendRequestSent,
             accountDeliveryMethod: product?.category === 'account' ? accountDeliveryMethod : undefined,
+            usePoints,
+              pointsToUse: usePoints ? pointsToUse : undefined,
+              eidOfferApplied: eidApply ? true : undefined,
+              eidDiscountAmount: eidApply ? eidDiscountAmount : undefined,
           }),
         })
       }
@@ -598,6 +643,10 @@ export function ProductView() {
                     <span className="text-sm text-muted-foreground line-through">{formatPrice(product.originalPrice)}</span>
                   )}
                 </div>
+                <div className="ml-auto text-right">
+                  <p className="text-sm text-muted-foreground">Final payable</p>
+                  <p className="text-lg font-bold text-gold">{formatPrice(finalPayable)}</p>
+                </div>
                 {product.priceCrypto && (
                   <span className="text-lg text-muted-foreground">
                     {formatCryptoPrice(product.priceCrypto)} USDT
@@ -684,6 +733,14 @@ export function ProductView() {
                     <TabsTrigger value="crypto" className="flex-1">
                       Crypto
                     </TabsTrigger>
+                    <TabsTrigger value="eid" className="flex-1">
+                      <div className="w-full flex items-center justify-center gap-2 py-1">
+                        <span className="inline-block rounded-full bg-gradient-to-r from-gold/40 via-gold/20 to-transparent p-1">
+                          <BadgeCheck className="w-4 h-4 text-gold" />
+                        </span>
+                        <span className="text-sm font-semibold text-gold">Eid Offer</span>
+                      </div>
+                    </TabsTrigger>
                   </TabsList>
 
                   {/* BDT Payment Options */}
@@ -733,6 +790,54 @@ export function ProductView() {
                         )}
                       </div>
                     ))}
+                  </TabsContent>
+
+                  {/* Eid Offer Options */}
+                  <TabsContent value="eid" className="mt-3">
+                    <Card className="border-gold/30 bg-gradient-to-br from-gold/5 via-gold/3 to-transparent">
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-lg text-gold font-extrabold">Eid Offer</CardTitle>
+                          <Badge className="bg-gold/10 text-gold">Limited</Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">Celebrate Eid al-Adha — limited time premium discount.</p>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          <div className="flex items-end gap-4">
+                            <div>
+                              <div className="text-xs text-muted-foreground">Original</div>
+                              <div className="text-2xl font-bold text-gold">{formatPrice(product?.priceBdt ?? 0)}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-muted-foreground">Eid Discount</div>
+                              <div className="text-xl font-semibold text-emerald-500">-{formatPrice(eidApply ? Math.floor(eidDiscountAmount) : 0)}</div>
+                            </div>
+                            <div className="ml-auto text-right">
+                              <div className="text-xs text-muted-foreground">Payable</div>
+                              <div className="text-2xl font-extrabold">{formatPrice(finalPayable)}</div>
+                            </div>
+                          </div>
+
+                          <div className="grid sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-sm">Eid Discount Amount (BDT)</label>
+                              <Input type="number" min={0} value={eidDiscountAmount} onChange={(e) => setEidDiscountAmount(Number(e.target.value || 0))} className="mt-1" />
+                              <p className="text-xs text-muted-foreground mt-1">Enter the discount amount to apply for this order.</p>
+                            </div>
+                            <div className="flex items-end gap-2">
+                              <Button variant={eidApply ? 'destructive' : 'default'} onClick={() => {
+                                const defaultAmt = paymentSettingsData?.['eid_discount'] ? Number(paymentSettingsData['eid_discount']) : eidDiscountAmount
+                                setEidDiscountAmount(defaultAmt)
+                                setEidApply(!eidApply)
+                              }} className="w-full">
+                                {eidApply ? 'Remove Eid Offer' : 'Apply Eid Offer'}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   </TabsContent>
 
                   {/* Crypto Payment Options */}
@@ -903,6 +1008,32 @@ export function ProductView() {
                     </div>
                   </>
                 )}
+
+                {/* Loyalty Points Usage */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Use Loyalty Points (optional)</label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={usePoints}
+                      onChange={(e) => { setUsePoints(e.target.checked); if (!e.target.checked) setPointsToUse(0) }}
+                      className="mt-1 h-4 w-4 rounded border-border/50 text-gold"
+                    />
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground">Balance: {loyaltyInfo?.balance ?? 0} pts</p>
+                      <input
+                        type="number"
+                        min={0}
+                        max={loyaltyInfo?.balance ?? 0}
+                        value={pointsToUse}
+                        onChange={(e) => setPointsToUse(Number(e.target.value || 0))}
+                        disabled={!usePoints}
+                        className="bg-background border-border/50 w-36"
+                      />
+                      <p className="text-xs text-muted-foreground">1 point = ৳1. Max use = product price.</p>
+                    </div>
+                  </div>
+                </div>
 
                 {/* Payment Proof Upload */}
                 <div className="space-y-2">

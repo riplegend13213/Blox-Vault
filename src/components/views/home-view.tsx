@@ -1303,7 +1303,13 @@ function LoyaltyProgramSection() {
                   <div className="flex items-center justify-center gap-2">
                     <Award className="w-5 h-5 text-gold" />
                     <span className="text-lg text-muted-foreground">
-                      Each point = <span className="text-gold font-semibold">৳1</span> discount
+                      Each point = <span className="text-gold font-semibold">৳1</span> (or <span className="text-gold font-semibold">$0.01</span>) discount
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-center gap-2">
+                    <Sparkles className="w-5 h-5 text-gold" />
+                    <span className="text-lg text-muted-foreground">
+                      <span className="text-gold font-semibold">$1 = 3 points</span>
                     </span>
                   </div>
                   <div className="flex items-center justify-center gap-2">

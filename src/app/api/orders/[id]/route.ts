@@ -206,6 +206,7 @@ export async function PATCH(
             category: true,
             images: true,
             priceBdt: true,
+            priceCrypto: true,
           },
         },
         user: {
@@ -271,6 +272,43 @@ export async function PATCH(
           })
         } else {
           await sendDiscordEmbed({ title: `Order update — #${id.slice(-8)}`, description: notifBody || undefined, fields })
+        }
+        // If status changed to confirmed, award loyalty points per rules
+        if ((parsed.data as any).status === 'confirmed' && order.status !== 'confirmed') {
+          try {
+            const pm = (updatedOrder as any).paymentMethod as string
+            const bdtMethods = ['bkash', 'nagad', 'rocket']
+            const cryptoMethods = ['usdt', 'btc', 'eth', 'bnb', 'ltc']
+            let pointsToAward = 0
+            // BDT flow: if product price >= 100 BDT award 2 points
+            if (bdtMethods.includes(pm) && (updatedOrder.product.priceBdt ?? 0) >= 100) {
+              pointsToAward = 2
+            } else if (cryptoMethods.includes(pm) && updatedOrder.product.priceCrypto) {
+              // For crypto/ USD flow: 1$ = 3 points
+              pointsToAward = Math.floor((updatedOrder.product.priceCrypto ?? 0) * 3)
+            }
+
+            if (pointsToAward > 0) {
+              await db.$transaction(async (tx) => {
+                await tx.pointTransaction.create({ data: { userId: updatedOrder.user.id, amount: pointsToAward, type: 'purchase_earn', reference: updatedOrder.id } })
+                await tx.user.update({ where: { id: updatedOrder.user.id }, data: { loyaltyPoints: { increment: pointsToAward } } })
+                await tx.order.update({ where: { id: updatedOrder.id }, data: { pointsEarned: pointsToAward } })
+                await tx.notification.create({ data: { userId: updatedOrder.user.id, title: 'Points Earned', body: `You earned ${pointsToAward} points for order #${updatedOrder.id.slice(-8)}.`, type: 'info' } })
+              })
+
+              // Send audit embed
+              try {
+                await sendDiscordEmbed({
+                  title: `Loyalty points awarded — Order #${updatedOrder.id.slice(-8)}`,
+                  description: `Awarded ${pointsToAward} pts to ${updatedOrder.user.username}`,
+                })
+              } catch (e) {
+                console.error('Failed to send loyalty award embed:', e)
+              }
+            }
+          } catch (e) {
+            console.error('Error awarding loyalty points:', e)
+          }
         }
       }
     }

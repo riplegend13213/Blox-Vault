@@ -37,6 +37,10 @@ const createOrderSchema = z.object({
   discordUsername: z.string().optional(),
   friendRequestSent: z.boolean().optional(),
   accountDeliveryMethod: z.enum(['discord', 'support_ticket']).optional(),
+  usePoints: z.boolean().optional(),
+  pointsToUse: z.number().int().min(0).optional(),
+  eidOfferApplied: z.boolean().optional(),
+  eidDiscountAmount: z.number().min(0).optional(),
 })
 
 export async function GET() {
@@ -107,6 +111,20 @@ export async function POST(request: Request) {
       if (typeof body.friendRequestSent === 'string') {
         body.friendRequestSent = body.friendRequestSent === 'true'
       }
+      if (typeof body.usePoints === 'string') {
+        body.usePoints = body.usePoints === 'true'
+      }
+      if (typeof body.pointsToUse === 'string') {
+        const n = Number(body.pointsToUse)
+        body.pointsToUse = Number.isFinite(n) ? n : undefined
+      }
+      if (typeof body.eidOfferApplied === 'string') {
+        body.eidOfferApplied = body.eidOfferApplied === 'true'
+      }
+      if (typeof body.eidDiscountAmount === 'string') {
+        const n = Number(body.eidDiscountAmount)
+        body.eidDiscountAmount = Number.isFinite(n) ? n : undefined
+      }
     } else {
       body = await request.json()
     }
@@ -116,7 +134,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: zodFirstError(parsed.error) }, { status: 400 })
     }
 
-    const { productId, paymentMethod, transactionId, robloxUsername, discordUsername, friendRequestSent, accountDeliveryMethod } = parsed.data
+    const { productId, paymentMethod, transactionId, robloxUsername, discordUsername, friendRequestSent, accountDeliveryMethod, usePoints, pointsToUse, eidOfferApplied, eidDiscountAmount } = parsed.data
 
     // Verify product exists and is active
     const product = await db.product.findUnique({
@@ -177,6 +195,40 @@ export async function POST(request: Request) {
       })
     }
 
+    // Calculate discount from points if requested (1 point = ৳1)
+    let pointsUsed = 0
+    let pointsDiscount = 0
+    if (usePoints && typeof pointsToUse === 'number') {
+      pointsUsed = Math.max(0, Math.floor(pointsToUse))
+      // Cap to product price
+      pointsDiscount = Math.min(pointsUsed, Math.floor(product.priceBdt))
+    }
+
+    // Eid discount (BDT amount) if provided
+    let eidApplied = false
+    let eidDiscount = 0
+    if (eidOfferApplied) {
+      eidApplied = true
+      // Prefer admin-configured eid discount from payment settings
+      try {
+        const setting = await db.paymentSetting.findUnique({ where: { key: 'eid_discount' } })
+        if (setting && setting.value) {
+          const n = Number(setting.value)
+          if (Number.isFinite(n)) {
+            eidDiscount = Math.max(0, Math.floor(n))
+          }
+        } else if (typeof eidDiscountAmount === 'number') {
+          eidDiscount = Math.max(0, Math.floor(eidDiscountAmount))
+        }
+      } catch (e) {
+        if (typeof eidDiscountAmount === 'number') {
+          eidDiscount = Math.max(0, Math.floor(eidDiscountAmount))
+        }
+      }
+      // cap to product price minus points discount
+      eidDiscount = Math.min(eidDiscount, Math.floor(product.priceBdt) - pointsDiscount)
+    }
+
     const order = await db.order.create({
       data: {
         userId: user.id,
@@ -189,9 +241,14 @@ export async function POST(request: Request) {
         friendRequestSent: friendRequestSent || false,
         accountDeliveryMethod: product.category === 'account' ? effectiveDeliveryMethod : null,
         supportTicketId: supportTicket?.id || null,
-        total: product.priceBdt,
+        total: product.priceBdt - pointsDiscount - eidDiscount,
         status: 'pending_payment',
         deliveryStatus: 'pending',
+        pointsEarned: 0,
+        pointsUsed,
+        pointsDiscount,
+        eidOfferApplied: eidApplied,
+        eidDiscount,
       },
       include: {
         product: {
@@ -237,6 +294,24 @@ export async function POST(request: Request) {
         })
       } catch (e) {
         console.error('Failed to send webhook for new order with proof:', e)
+      }
+    }
+
+    // If points were used, perform point deduction and record transaction
+    if (pointsUsed > 0) {
+      try {
+        const currentUser = await db.user.findUnique({ where: { id: user.id }, select: { loyaltyPoints: true } })
+        if (!currentUser || pointsUsed > currentUser.loyaltyPoints) {
+          console.warn('Insufficient points at finalization for user', user.id)
+        } else {
+          await db.$transaction(async (tx) => {
+            await tx.pointTransaction.create({ data: { userId: user.id, amount: -pointsUsed, type: 'redemption', reference: order.id } })
+            await tx.user.update({ where: { id: user.id }, data: { loyaltyPoints: { decrement: pointsUsed } } })
+            await tx.notification.create({ data: { userId: user.id, title: 'Points Used', body: `You used ${pointsUsed} points for ৳${pointsDiscount} discount on order #${order.id.slice(-8)}.`, type: 'info' } })
+          })
+        }
+      } catch (e) {
+        console.error('Failed to apply loyalty points on order create:', e)
       }
     }
 
