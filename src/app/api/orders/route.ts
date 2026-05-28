@@ -89,7 +89,27 @@ export async function POST(request: Request) {
       )
     }
 
-    const body = await request.json()
+    // Support JSON and multipart/form-data (file uploads)
+    let body: any
+    const contentType = request.headers.get('content-type') || ''
+    if (contentType.includes('multipart/form-data')) {
+      const form = await request.formData()
+      const maybeFile = form.get('proof') || form.get('proofImage')
+      let proofImage: string | undefined
+      if (maybeFile && (maybeFile as any).arrayBuffer) {
+        const file = maybeFile as File
+        const buffer = Buffer.from(await file.arrayBuffer())
+        proofImage = `data:${file.type};base64,${buffer.toString('base64')}`
+      }
+      body = Object.fromEntries(Array.from(form.entries()).map(([k, v]) => [k, typeof v === 'string' ? v : undefined]))
+      if (proofImage) body.proofImage = proofImage
+      // Coerce common types from form data
+      if (typeof body.friendRequestSent === 'string') {
+        body.friendRequestSent = body.friendRequestSent === 'true'
+      }
+    } else {
+      body = await request.json()
+    }
     const parsed = createOrderSchema.safeParse(body)
 
     if (!parsed.success) {
@@ -201,14 +221,18 @@ export async function POST(request: Request) {
     if (transactionId || parsed.data.proofImage) {
       try {
         const customer = await db.user.findUnique({ where: { id: user.id }, select: { username: true, email: true } })
+        const fields: any[] = [
+          { name: 'Payment Method', value: paymentMethod },
+          ...(transactionId ? [{ name: 'Transaction ID', value: transactionId }] : []),
+          { name: 'Customer', value: `${customer?.username ?? 'Unknown'} (${customer?.email ?? 'N/A'})` },
+        ]
+        if (robloxUsername) fields.push({ name: 'Roblox User', value: robloxUsername, inline: true })
+        if (discordUsername) fields.push({ name: 'Discord User', value: discordUsername, inline: true })
+
         await sendDiscordEmbed({
           title: `New order with proof — #${order.id.slice(-8)}`,
           description: `Product: ${product.name}`,
-          fields: [
-            { name: 'Payment Method', value: paymentMethod },
-            ...(transactionId ? [{ name: 'Transaction ID', value: transactionId }] : []),
-            { name: 'Customer', value: `${customer?.username ?? 'Unknown'} (${customer?.email ?? 'N/A'})` },
-          ],
+          fields,
           imageUrl: parsed.data.proofImage || undefined,
         })
       } catch (e) {

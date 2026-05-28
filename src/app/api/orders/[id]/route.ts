@@ -23,6 +23,8 @@ async function getAuthUser() {
 const updateOrderSchema = z.object({
   proofImage: z.string().optional(),
   transactionId: z.string().optional(),
+  robloxUsername: z.string().optional(),
+  discordUsername: z.string().optional(),
 })
 
 export async function PATCH(
@@ -61,7 +63,26 @@ export async function PATCH(
       )
     }
 
-    const body = await request.json()
+    // Support JSON and multipart/form-data for proof uploads
+    let body: any
+    const contentType = request.headers.get('content-type') || ''
+    if (contentType.includes('multipart/form-data')) {
+      const form = await request.formData()
+      const maybeFile = form.get('proof') || form.get('proofImage')
+      let proofImage: string | undefined
+      if (maybeFile && (maybeFile as any).arrayBuffer) {
+        const file = maybeFile as File
+        const buffer = Buffer.from(await file.arrayBuffer())
+        proofImage = `data:${file.type};base64,${buffer.toString('base64')}`
+      }
+      body = Object.fromEntries(Array.from(form.entries()).map(([k, v]) => [k, typeof v === 'string' ? v : undefined]))
+      if (proofImage) body.proofImage = proofImage
+      if (typeof body.friendRequestSent === 'string') {
+        body.friendRequestSent = body.friendRequestSent === 'true'
+      }
+    } else {
+      body = await request.json()
+    }
 
     // Regular users can only upload proof and add transaction ID
     if (user.role !== 'admin') {
@@ -73,7 +94,7 @@ export async function PATCH(
         )
       }
 
-      const { proofImage, transactionId } = parsed.data
+      const { proofImage, transactionId, robloxUsername, discordUsername } = parsed.data
       const updateData: Record<string, unknown> = {}
 
       if (proofImage) {
@@ -87,6 +108,8 @@ export async function PATCH(
       if (transactionId) {
         updateData.transactionId = transactionId
       }
+      if (robloxUsername) updateData.robloxUsername = robloxUsername
+      if (discordUsername) updateData.discordUsername = discordUsername
 
       const updatedOrder = await db.order.update({
         where: { id },
@@ -120,16 +143,18 @@ export async function PATCH(
         const customer = await db.user.findUnique({ where: { id: order.userId }, select: { id: true, username: true, email: true } })
 
         // Send rich embed to Discord with proof preview if available
+        const fields: any[] = [
+          { name: 'Method', value: (updatedOrder as any).paymentMethod || 'N/A', inline: true },
+          { name: 'Customer', value: `${customer?.username ?? 'Unknown'} (${customer?.email ?? 'N/A'})`, inline: true },
+        ]
+        if ((updatedOrder as any).discordUsername) fields.push({ name: 'Discord', value: (updatedOrder as any).discordUsername, inline: true })
+        if ((updatedOrder as any).robloxUsername) fields.push({ name: 'Roblox', value: (updatedOrder as any).robloxUsername, inline: true })
+        if ((updatedOrder as any).transactionId) fields.push({ name: 'Transaction ID', value: (updatedOrder as any).transactionId })
+
         await sendDiscordEmbed({
           title: `Payment proof uploaded — Order #${id.slice(-8)}`,
           description: `Product: ${updatedOrder.product.name}`,
-          fields: [
-            { name: 'Method', value: (updatedOrder as any).paymentMethod || 'N/A', inline: true },
-            { name: 'Customer', value: `${customer?.username ?? 'Unknown'} (${customer?.email ?? 'N/A'})`, inline: true },
-            { name: 'Discord', value: (updatedOrder as any).discordUsername ?? 'N/A', inline: true },
-            { name: 'Roblox', value: (updatedOrder as any).robloxUsername ?? 'N/A', inline: true },
-            ...((updatedOrder as any).transactionId ? [{ name: 'Transaction ID', value: (updatedOrder as any).transactionId }] : []),
-          ],
+          fields,
           imageUrl: (updatedOrder as any).proofImage || undefined,
         })
       }

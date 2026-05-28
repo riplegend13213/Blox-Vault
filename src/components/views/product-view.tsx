@@ -187,19 +187,33 @@ export function ProductView() {
   // Create order mutation
   const createOrderMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          productId: selectedProductId,
-          paymentMethod: selectedPaymentMethod,
-          transactionId: transactionId || undefined,
-          robloxUsername,
-          discordUsername,
-          friendRequestSent,
-          accountDeliveryMethod: product?.category === 'account' ? accountDeliveryMethod : undefined,
-        }),
-      })
+      let res: Response
+      if (proofFile) {
+        const form = new FormData()
+        form.append('productId', String(selectedProductId))
+        form.append('paymentMethod', selectedPaymentMethod)
+        if (transactionId) form.append('transactionId', transactionId)
+        if (robloxUsername) form.append('robloxUsername', robloxUsername)
+        if (discordUsername) form.append('discordUsername', discordUsername)
+        form.append('friendRequestSent', String(friendRequestSent))
+        if (product?.category === 'account') form.append('accountDeliveryMethod', accountDeliveryMethod)
+        form.append('proof', proofFile)
+        res = await fetch('/api/orders', { method: 'POST', body: form })
+      } else {
+        res = await fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            productId: selectedProductId,
+            paymentMethod: selectedPaymentMethod,
+            transactionId: transactionId || undefined,
+            robloxUsername,
+            discordUsername,
+            friendRequestSent,
+            accountDeliveryMethod: product?.category === 'account' ? accountDeliveryMethod : undefined,
+          }),
+        })
+      }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to create order')
       return data
@@ -214,6 +228,7 @@ export function ProductView() {
       } else {
         navigate('orders')
       }
+      setProofFile(null)
     },
     onError: (error: Error) => {
       toast.error('Failed to place order', {
