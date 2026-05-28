@@ -69,7 +69,7 @@ export const PAYMENT_METHODS = {
 export const ROBUX_COMMUNITY_NOTICE = {
   title: '⚠️ Important: Robux Delivery Requirements',
   message: 'To receive Robux through our group payout system, you must join our Roblox community/group and remain a member for at least 14 days before we can top up your Robux. This is a Roblox platform requirement that cannot be bypassed.',
-  communityLink: 'https://www.roblox.com/groups/BloxVault',
+  communityLink: 'https://www.roblox.com/groups/Blox-Vault',
   communityName: 'BloxVault Official Group',
   daysRequired: 14,
 }
