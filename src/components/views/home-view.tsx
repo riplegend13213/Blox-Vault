@@ -46,16 +46,16 @@ import { ProductCard } from '@/components/shared/product-card'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 
 // ─── Animation variants ────────────────────────────────────────────
-const sectionVariants = {
+const sectionVariants: any = {
   hidden: { opacity: 0, y: 30 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
+    transition: { duration: 0.6, ease: 'easeInOut' },
   },
 }
 
-const staggerContainer = {
+const staggerContainer: any = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -63,12 +63,12 @@ const staggerContainer = {
   },
 }
 
-const staggerItem = {
+const staggerItem: any = {
   hidden: { opacity: 0, y: 20 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] },
+    transition: { duration: 0.5, ease: 'easeInOut' },
   },
 }
 
@@ -387,7 +387,14 @@ function HeroSection() {
 
   // Generate dot grid positions (memoized)
   const dots = useMemo(() => {
-    const d = []
+    const d: Array<{
+      id: number
+      x: number
+      y: number
+      size: number
+      delay: number
+      duration: number
+    }> = []
     for (let i = 0; i < 50; i++) {
       d.push({
         id: i,
@@ -494,7 +501,7 @@ function HeroSection() {
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.8, ease: 'easeInOut' }}
         >
           <Badge
             variant="outline"
@@ -508,7 +515,7 @@ function HeroSection() {
           className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight mb-6"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.8, delay: 0.1, ease: 'easeInOut' }}
         >
           The Most{' '}
           <span className="text-gold-gradient">Trusted</span>
@@ -520,7 +527,7 @@ function HeroSection() {
           className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.8, delay: 0.2, ease: 'easeInOut' }}
         >
           Premium services, secure transactions, professional delivery
         </motion.p>
@@ -529,7 +536,7 @@ function HeroSection() {
           className="flex flex-col sm:flex-row items-center justify-center gap-4"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.8, delay: 0.3, ease: 'easeInOut' }}
         >
           <Button
             size="lg"
@@ -564,7 +571,7 @@ function HeroSection() {
           className="flex flex-wrap items-center justify-center gap-6 mt-12"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.8, delay: 0.5, ease: 'easeInOut' }}
         >
           {[
             { icon: Lock, label: 'Secure Payment' },
@@ -1075,7 +1082,7 @@ function FlashDealsSection() {
                     {(() => {
                       let dealImages: string[] = []
                       try {
-                        const parsed = JSON.parse((deal as Record<string, unknown>).images as string || '[]')
+                        const parsed = JSON.parse(((deal as any).images as string) || '[]')
                         if (Array.isArray(parsed)) dealImages = parsed
                       } catch { /* empty */ }
                       return dealImages.length > 0 ? (
@@ -1748,13 +1755,13 @@ export function HomeView() {
       <AnnouncementBanner />
       <HeroSection />
       <RobuxQuickAccessSection />
+      <WhyChooseUsSection />
+      <ReviewsSection />
       <LiveStatsSection />
       <FeaturedProductsSection />
       <FlashDealsSection />
-      <WhyChooseUsSection />
       <LoyaltyProgramSection />
       <ActivityFeedSection />
-      <ReviewsSection />
       <FaqSection />
       <CtaSection />
     </div>

@@ -18,6 +18,17 @@ async function getAuthUser() {
   return user
 }
 
+async function sendDiscordWebhook(message: string) {
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL
+  if (!webhookUrl) return
+
+  await fetch(webhookUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content: message }),
+  })
+}
+
 const updateOrderSchema = z.object({
   proofImage: z.string().optional(),
   transactionId: z.string().optional(),
@@ -113,6 +124,15 @@ export async function PATCH(
             type: 'payment',
           },
         })
+
+        const webhookMessage = `🧾 Payment proof uploaded for order #${id.slice(-8)}\n` +
+          `Product: ${updatedOrder.product.name}\n` +
+          `Method: ${updatedOrder.paymentMethod}\n` +
+          `Discord: ${updatedOrder.discordUsername ?? 'N/A'}\n` +
+          `Roblox: ${updatedOrder.robloxUsername ?? 'N/A'}\n` +
+          `Proof: ${updatedOrder.proofImage}`
+
+        await sendDiscordWebhook(webhookMessage)
       }
 
       return NextResponse.json({

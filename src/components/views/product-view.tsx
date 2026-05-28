@@ -267,32 +267,42 @@ export function ProductView() {
       return
     }
 
-    if (product.category === 'account' && accountDeliveryMethod === 'support_ticket') {
-      createOrderMutation.mutate()
+    if (!transactionId.trim()) {
+      toast.error('Transaction ID required', {
+        description: 'Please enter your transaction ID to proceed.',
+      })
       return
     }
 
-    if (product.category === 'account' && accountDeliveryMethod === 'discord') {
-      if (!discordUsername.trim()) {
+    if (product.category === 'account') {
+      if (accountDeliveryMethod === 'discord' && !discordUsername.trim()) {
         toast.error('Discord username required', {
           description: 'Enter the Discord username where we should contact you.',
         })
         return
       }
+    } else {
+      if (!robloxUsername.trim()) {
+        toast.error('Roblox username required', {
+          description: 'Enter the Roblox username where the request was sent.',
+        })
+        return
+      }
+      if (!friendRequestSent) {
+        toast.error('Send a friend request first', {
+          description: `Send a Roblox friend request to ${sellerRobloxUsername} and then check the box.`,
+        })
+        return
+      }
     }
 
-    if (!robloxUsername.trim()) {
-      toast.error('Roblox username required', {
-        description: 'Enter the Roblox username where the request was sent.',
-      })
-      return
-    }
-    if (!friendRequestSent) {
+    if (product.category === 'account' && accountDeliveryMethod === 'discord' && !friendRequestSent) {
       toast.error('Send a friend request first', {
         description: `Send a Roblox friend request to ${sellerRobloxUsername} and then check the box.`,
       })
       return
     }
+
     createOrderMutation.mutate()
   }
 
@@ -311,12 +321,13 @@ export function ProductView() {
     return Array.from({ length: 5 }).map((_, i) => (
       <Star
         key={i}
-        className={`${size} ${i < Math.floor(rating)
+        className={`${size} ${
+          i < Math.floor(rating)
             ? 'fill-gold text-gold'
             : i < rating
               ? 'fill-gold/50 text-gold'
               : 'text-muted-foreground/30'
-          }`}
+        }`}
       />
     ))
   }
@@ -436,8 +447,9 @@ export function ProductView() {
           >
             {/* Product Image Gallery */}
             <div
-              className={`relative rounded-xl overflow-hidden border ${product.rarity ? RARITY_BORDER_COLORS[product.rarity] || 'border-border/50' : 'border-border/50'
-                }`}
+              className={`relative rounded-xl overflow-hidden border ${
+                product.rarity ? RARITY_BORDER_COLORS[product.rarity] || 'border-border/50' : 'border-border/50'
+              }`}
             >
               {/* Main Image */}
               <div className="relative aspect-[4/3] bg-gradient-to-br from-accent/50 to-accent/20 overflow-hidden">
@@ -521,10 +533,11 @@ export function ProductView() {
                     <button
                       key={i}
                       onClick={() => setSelectedImageIndex(i)}
-                      className={`relative w-16 h-16 rounded-lg overflow-hidden shrink-0 border-2 transition-all ${selectedImageIndex === i
+                      className={`relative w-16 h-16 rounded-lg overflow-hidden shrink-0 border-2 transition-all ${
+                        selectedImageIndex === i
                           ? 'border-gold ring-1 ring-gold/30'
                           : 'border-border/30 hover:border-border/60'
-                        }`}
+                      }`}
                     >
                       <img
                         src={img}
@@ -664,10 +677,11 @@ export function ProductView() {
                       <div key={method.id}>
                         <button
                           onClick={() => setSelectedPaymentMethod(method.id)}
-                          className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all ${selectedPaymentMethod === method.id
+                          className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                            selectedPaymentMethod === method.id
                               ? 'border-gold/50 bg-gold/5'
                               : 'border-border/30 hover:border-border/60'
-                            }`}
+                          }`}
                         >
                           <span className="text-lg">{method.icon}</span>
                           <span className="text-sm font-medium">{method.name}</span>
@@ -712,10 +726,11 @@ export function ProductView() {
                       <div key={method.id}>
                         <button
                           onClick={() => setSelectedPaymentMethod(method.id)}
-                          className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all ${selectedPaymentMethod === method.id
+                          className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                            selectedPaymentMethod === method.id
                               ? 'border-gold/50 bg-gold/5'
                               : 'border-border/30 hover:border-border/60'
-                            }`}
+                          }`}
                         >
                           <span className="text-lg">{method.icon}</span>
                           <span className="text-sm font-medium">{method.name}</span>
@@ -781,14 +796,15 @@ export function ProductView() {
                       <button
                         type="button"
                         onClick={() => setAccountDeliveryMethod('discord')}
-                        className={`rounded-xl border p-4 text-left transition-colors ${accountDeliveryMethod === 'discord'
+                        className={`rounded-xl border p-4 text-left transition-colors ${
+                          accountDeliveryMethod === 'discord'
                             ? 'border-gold bg-gold/10'
                             : 'border-border/50 bg-background'
-                          }`}
+                        }`}
                       >
                         <p className="font-semibold">Discord</p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Send a friend request on Discord and share your username so we can accept it.
+                          Send a friend request on Roblox and share your username so we can accept it.
                         </p>
                         <p className="text-xs text-muted-foreground mt-2">
                           My Discord: <span className="font-semibold text-gold">{sellerDiscordUsername}</span>
@@ -797,10 +813,11 @@ export function ProductView() {
                       <button
                         type="button"
                         onClick={() => setAccountDeliveryMethod('support_ticket')}
-                        className={`rounded-xl border p-4 text-left transition-colors ${accountDeliveryMethod === 'support_ticket'
+                        className={`rounded-xl border p-4 text-left transition-colors ${
+                          accountDeliveryMethod === 'support_ticket'
                             ? 'border-gold bg-gold/10'
                             : 'border-border/50 bg-background'
-                          }`}
+                        }`}
                       >
                         <p className="font-semibold">Support Ticket</p>
                         <p className="text-xs text-muted-foreground mt-1">
@@ -840,109 +857,96 @@ export function ProductView() {
                     )}
                     <div className="space-y-2">
                       <label className="text-base font-semibold">
-                        Roblox Username{" "}
-                        {product.category !== 'account' && (
-                          <span className="text-red-500">*</span>
-                        )}
+                        Roblox Username {product.category === 'account' ? null : <span className="text-red-500">*</span>}
                       </label>
                       <Input
-                        placeholder="Enter your Roblox username"
+                        placeholder={product.category === 'account' ? "Enter your Roblox username (optional)" : "Enter your Roblox username"}
                         value={robloxUsername}
                         onChange={(e) => setRobloxUsername(e.target.value)}
                         className="bg-background border-border/50"
                       />
                       <p className="text-sm text-muted-foreground font-medium">
-                        {product.category === 'account'
-                          ? 'Optional for account orders.'
-                          : 'Enter the Roblox username where the friend request was sent.'}
+                        {product.category === 'account' ? 'Optional for account orders. Enter the Roblox username where the friend request was sent, if any.' : 'Enter the Roblox username where the friend request was sent.'}
                       </p>
                     </div>
-                    {product.category !== 'account' && (
-                      <div className="space-y-2">
-                        <label className="text-base font-semibold">
-                          Friend Request Confirmation
-                        </label>
 
-                        <div className="flex items-start gap-3">
-                          <input
-                            id="friendRequest"
-                            type="checkbox"
-                            checked={friendRequestSent}
-                            onChange={(e) => setFriendRequestSent(e.target.checked)}
-                            className="mt-1 h-4 w-4 rounded border-border/50 text-gold focus:ring-gold"
-                          />
-
-                          <div className="text-sm text-muted-foreground font-medium">
-                            Send a friend request to{" "}
-                            <span className="font-semibold text-gold">
-                              {sellerRobloxUsername}
-                            </span>{" "}
-                            on Roblox before placing the order.
-                            Then check this box so we can accept it and deliver the product.
-                          </div>
+                    <div className="space-y-2">
+                      <label className="text-base font-semibold">Friend Request Confirmation</label>
+                      <div className="flex items-start gap-3">
+                        <input
+                          id="friendRequest"
+                          type="checkbox"
+                          checked={friendRequestSent}
+                          onChange={(e) => setFriendRequestSent(e.target.checked)}
+                          className="mt-1 h-4 w-4 rounded border-border/50 text-gold focus:ring-gold"
+                        />
+                        <div className="text-sm text-muted-foreground font-medium">
+                          Send a friend request to <span className="font-semibold text-gold">{sellerRobloxUsername}</span> on Roblox before placing the order.
+                          Then check this box so we can accept it and deliver the product.
                         </div>
                       </div>
-                    )}
+                    </div>
                   </>
                 )}
-                    {/* Payment Proof Upload */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">
-                        Payment Proof (Optional)
-                      </label>
-                      <div className="relative">
-                        <Input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => setProofFile(e.target.files?.[0] || null)}
-                          className="bg-background border-border/50 file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-gold/10 file:text-gold hover:file:bg-gold/20"
-                        />
-                      </div>
-                      {proofFile && (
-                        <p className="text-xs text-muted-foreground">
-                          Selected: {proofFile.name}
-                        </p>
-                      )}
-                    </div>
 
-                    <Separator className="bg-border/30" />
+                {/* Payment Proof Upload */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Payment Proof (Optional)
+                  </label>
+                  <div className="relative">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setProofFile(e.target.files?.[0] || null)}
+                      className="bg-background border-border/50 file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-gold/10 file:text-gold hover:file:bg-gold/20"
+                    />
+                  </div>
+                  {proofFile && (
+                    <p className="text-xs text-muted-foreground">
+                      Selected: {proofFile.name}
+                    </p>
+                  )}
+                </div>
 
-                    {/* Place Order Button */}
-                    <Button
-                      onClick={handlePlaceOrder}
-                      disabled={!isInStock || createOrderMutation.isPending}
-                      className="w-full h-12 text-base font-semibold bg-gold hover:bg-gold/90 text-gold-foreground disabled:opacity-50"
-                      size="lg"
-                    >
-                      {createOrderMutation.isPending ? (
-                        <span className="flex items-center gap-2">
-                          <span className="w-4 h-4 border-2 border-gold-foreground/30 border-t-gold-foreground rounded-full animate-spin" />
-                          Processing...
-                        </span>
-                      ) : !isInStock ? (
-                        'Out of Stock'
-                      ) : !isAuthenticated ? (
-                        'Login to Place Order'
-                      ) : (
-                        <>
-                          <Lock className="w-4 h-4 mr-2" />
-                          Place Order
-                        </>
-                      )}
-                    </Button>
+                <Separator className="bg-border/30" />
 
-                    {/* Security Badges */}
-                    <div className="flex items-center justify-center gap-4 pt-1">
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <ShieldCheck className="w-3.5 h-3.5 text-green-500" />
-                        <span>Secure Payment</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <BadgeCheck className="w-3.5 h-3.5 text-gold" />
-                        <span>Verified Seller</span>
-                      </div>
-                    </div>
-                  </CardContent>
+                {/* Place Order Button */}
+                <Button
+                  onClick={handlePlaceOrder}
+                  disabled={!isInStock || createOrderMutation.isPending}
+                  className="w-full h-12 text-base font-semibold bg-gold hover:bg-gold/90 text-gold-foreground disabled:opacity-50"
+                  size="lg"
+                >
+                  {createOrderMutation.isPending ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-4 h-4 border-2 border-gold-foreground/30 border-t-gold-foreground rounded-full animate-spin" />
+                      Processing...
+                    </span>
+                  ) : !isInStock ? (
+                    'Out of Stock'
+                  ) : !isAuthenticated ? (
+                    'Login to Place Order'
+                  ) : (
+                    <>
+                      <Lock className="w-4 h-4 mr-2" />
+                      Place Order
+                    </>
+                  )}
+                </Button>
+
+                {/* Security Badges */}
+                <div className="flex items-center justify-center gap-4 pt-1">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <ShieldCheck className="w-3.5 h-3.5 text-green-500" />
+                    <span>Secure Payment</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <BadgeCheck className="w-3.5 h-3.5 text-gold" />
+                    <span>Verified Seller</span>
+                  </div>
+                </div>
+              </CardContent>
             </Card>
           </motion.div>
         </div>
@@ -1075,10 +1079,11 @@ export function ProductView() {
                                 className="p-0.5 hover:scale-110 transition-transform"
                               >
                                 <Star
-                                  className={`w-7 h-7 ${i < reviewRating
+                                  className={`w-7 h-7 ${
+                                    i < reviewRating
                                       ? 'fill-gold text-gold'
                                       : 'text-muted-foreground/30'
-                                    }`}
+                                  }`}
                                 />
                               </button>
                             ))}

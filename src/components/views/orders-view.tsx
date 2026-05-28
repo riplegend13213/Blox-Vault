@@ -47,6 +47,11 @@ interface Order {
   deliveryStatus: string
   total: number
   adminNote: string | null
+  robloxUsername?: string | null
+  discordUsername?: string | null
+  friendRequestSent?: boolean | null
+  accountDeliveryMethod?: string | null
+  supportTicketId?: string | null
   createdAt: string
   updatedAt: string
   product: {
@@ -235,6 +240,7 @@ function OrderRow({ order }: { order: Order }) {
                     <p className="text-xs text-muted-foreground">Product</p>
                     <p className="text-sm font-medium">{order.product.name}</p>
                   </div>
+
                   <div>
                     <p className="text-xs text-muted-foreground">Payment Method</p>
                     <div className="flex items-center gap-2">
@@ -244,47 +250,85 @@ function OrderRow({ order }: { order: Order }) {
                       </p>
                     </div>
                   </div>
+
                   {order.transactionId && (
                     <div>
                       <p className="text-xs text-muted-foreground">Transaction ID</p>
                       <p className="text-sm font-mono">{order.transactionId}</p>
                     </div>
                   )}
+
+                  {order.accountDeliveryMethod && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Delivery Type</p>
+                      <p className="text-sm font-medium capitalize">
+                        {order.accountDeliveryMethod === 'support_ticket' ? 'Support Ticket' : 'Discord'}
+                      </p>
+                    </div>
+                  )}
+
+                  {order.supportTicketId && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Support Ticket ID</p>
+                      <p className="text-sm font-mono">{order.supportTicketId}</p>
+                    </div>
+                  )}
                 </div>
+
                 <div className="space-y-3">
                   <div>
                     <p className="text-xs text-muted-foreground">Total</p>
                     <p className="text-sm font-bold text-gold">{formatPrice(order.total)}</p>
                   </div>
+
                   <div>
                     <p className="text-xs text-muted-foreground">Delivery Status</p>
                     <Badge variant="outline" className="text-xs mt-0.5">
                       {DELIVERY_STATUS_LABELS[order.deliveryStatus] || order.deliveryStatus}
                     </Badge>
                   </div>
+
                   <div>
                     <p className="text-xs text-muted-foreground">Order Date</p>
                     <p className="text-sm">{formatDate(order.createdAt)}</p>
                   </div>
-                </div>
-              </div>
 
-              {/* Payment Proof */}
-              <div>
-                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                  Payment Proof
-                </h4>
-                {order.proofImage ? (
-                  <div className="relative">
-                    <img
-                      src={order.proofImage}
-                      alt="Payment proof"
-                      className="w-full max-w-xs rounded-lg border border-border/50 object-cover max-h-48"
-                    />
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3">
-                    <p className="text-sm text-muted-foreground">No proof uploaded yet.</p>
+                  {order.discordUsername && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Discord Username</p>
+                      <p className="text-sm font-medium">{order.discordUsername}</p>
+                    </div>
+                  )}
+
+                  {order.robloxUsername && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Roblox Username</p>
+                      <p className="text-sm font-medium">{order.robloxUsername}</p>
+                    </div>
+                  )}
+
+                  {order.friendRequestSent !== undefined && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Friend Request Sent</p>
+                      <p className="text-sm font-medium">{order.friendRequestSent ? 'Yes' : 'No'}</p>
+                    </div>
+                  )}
+
+                  {order.proofImage && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Payment Proof</p>
+                      <a
+                        href={order.proofImage}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-sm font-medium text-gold hover:underline break-all"
+                      >
+                        {order.proofImage}
+                      </a>
+                    </div>
+                  )}
+
+                  <div>
                     <Dialog open={proofDialogOpen} onOpenChange={setProofDialogOpen}>
                       <DialogTrigger asChild>
                         <Button size="sm" variant="outline" className="text-gold border-gold/30 hover:bg-gold/10">
@@ -322,42 +366,43 @@ function OrderRow({ order }: { order: Order }) {
                         </div>
                       </DialogContent>
                     </Dialog>
+
+                    {order.proofImage && order.status === 'pending_payment' && (
+                      <Dialog open={proofDialogOpen} onOpenChange={setProofDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button size="sm" variant="outline" className="mt-2 text-gold border-gold/30 hover:bg-gold/10">
+                            <Upload className="w-3.5 h-3.5 mr-1.5" />
+                            Re-upload Proof
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Re-upload Payment Proof</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4 pt-2">
+                            <Input
+                              placeholder="https://example.com/proof.jpg"
+                              value={proofUrl}
+                              onChange={(e) => setProofUrl(e.target.value)}
+                            />
+                            <Button
+                              className="w-full bg-gold hover:bg-gold/90 text-gold-foreground"
+                              disabled={!proofUrl.trim() || uploadProofMutation.isPending}
+                              onClick={() => uploadProofMutation.mutate()}
+                            >
+                              {uploadProofMutation.isPending ? (
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              ) : (
+                                <Upload className="w-4 h-4 mr-2" />
+                              )}
+                              Submit Proof
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    )}
                   </div>
-                )}
-                {order.proofImage && order.status === 'pending_payment' && (
-                  <Dialog open={proofDialogOpen} onOpenChange={setProofDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button size="sm" variant="outline" className="mt-2 text-gold border-gold/30 hover:bg-gold/10">
-                        <Upload className="w-3.5 h-3.5 mr-1.5" />
-                        Re-upload Proof
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Re-upload Payment Proof</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4 pt-2">
-                        <Input
-                          placeholder="https://example.com/proof.jpg"
-                          value={proofUrl}
-                          onChange={(e) => setProofUrl(e.target.value)}
-                        />
-                        <Button
-                          className="w-full bg-gold hover:bg-gold/90 text-gold-foreground"
-                          disabled={!proofUrl.trim() || uploadProofMutation.isPending}
-                          onClick={() => uploadProofMutation.mutate()}
-                        >
-                          {uploadProofMutation.isPending ? (
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          ) : (
-                            <Upload className="w-4 h-4 mr-2" />
-                          )}
-                          Submit Proof
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                )}
+                </div>
               </div>
 
               {/* Admin Note */}

@@ -126,12 +126,6 @@ export async function POST(request: Request) {
           { status: 400 }
         )
       }
-      if (!robloxUsername || !robloxUsername.trim()) {
-        return NextResponse.json(
-          { success: false, error: 'Roblox username is required for Discord delivery' },
-          { status: 400 }
-        )
-      }
       if (!friendRequestSent) {
         return NextResponse.json(
           { success: false, error: 'You must send a friend request to the seller before purchasing' },
