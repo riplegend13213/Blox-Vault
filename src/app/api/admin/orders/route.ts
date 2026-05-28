@@ -3,7 +3,9 @@ import { cookies } from 'next/headers'
 import { z } from 'zod'
 import { zodFirstError } from '@/lib/validation'
 import { db } from '@/lib/db'
+import { sendDiscordEmbed } from '@/lib/discord'
 import { Prisma } from '@prisma/client'
+
 
 async function requireAdmin() {
   const cookieStore = await cookies()
@@ -207,6 +209,20 @@ export async function PATCH(request: Request) {
           type: 'order',
         },
       })
+      // send webhook with order and customer info
+      try {
+        const customer = (await db.user.findUnique({ where: { id: order.userId }, select: { username: true, email: true } }))
+        await sendDiscordEmbed({
+          title: `Admin updated order #${orderId.slice(-8)}`,
+          description: `Product: ${updatedOrder.product.name}`,
+          fields: [
+            { name: 'Customer', value: `${customer?.username ?? 'Unknown'} (${customer?.email ?? 'N/A'})` },
+            { name: 'Status', value: String(parsed.data.status) },
+          ],
+        })
+      } catch (e) {
+        console.error('Webhook admin order status error:', e)
+      }
     }
 
     if (parsed.data.deliveryStatus) {
@@ -225,6 +241,19 @@ export async function PATCH(request: Request) {
           type: 'order',
         },
       })
+      try {
+        const customer = (await db.user.findUnique({ where: { id: order.userId }, select: { username: true, email: true } }))
+        await sendDiscordEmbed({
+          title: `Delivery update for order #${orderId.slice(-8)}`,
+          description: `Product: ${updatedOrder.product.name}`,
+          fields: [
+            { name: 'Customer', value: `${customer?.username ?? 'Unknown'} (${customer?.email ?? 'N/A'})` },
+            { name: 'Delivery', value: String(parsed.data.deliveryStatus) },
+          ],
+        })
+      } catch (e) {
+        console.error('Webhook admin delivery status error:', e)
+      }
     }
 
     return NextResponse.json({

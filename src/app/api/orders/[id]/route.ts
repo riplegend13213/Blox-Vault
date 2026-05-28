@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { z } from 'zod'
 import { zodFirstError } from '@/lib/validation'
 import { db } from '@/lib/db'
+import { sendDiscordEmbed } from '@/lib/discord'
 
 async function getAuthUser() {
   const cookieStore = await cookies()
@@ -18,16 +19,6 @@ async function getAuthUser() {
   return user
 }
 
-async function sendDiscordWebhook(message: string) {
-  const webhookUrl = process.env.DISCORD_WEBHOOK_URL
-  if (!webhookUrl) return
-
-  await fetch(webhookUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content: message }),
-  })
-}
 
 const updateOrderSchema = z.object({
   proofImage: z.string().optional(),
@@ -114,7 +105,7 @@ export async function PATCH(
         },
       })
 
-      // Create notification
+      // Create notification and send webhook with customer info
       if (proofImage && order.status === 'pending_payment') {
         await db.notification.create({
           data: {
@@ -125,14 +116,22 @@ export async function PATCH(
           },
         })
 
-        const webhookMessage = `🧾 Payment proof uploaded for order #${id.slice(-8)}\n` +
-          `Product: ${updatedOrder.product.name}\n` +
-          `Method: ${updatedOrder.paymentMethod}\n` +
-          `Discord: ${updatedOrder.discordUsername ?? 'N/A'}\n` +
-          `Roblox: ${updatedOrder.robloxUsername ?? 'N/A'}\n` +
-          `Proof: ${updatedOrder.proofImage}`
+        // Fetch customer details
+        const customer = await db.user.findUnique({ where: { id: order.userId }, select: { id: true, username: true, email: true } })
 
-        await sendDiscordWebhook(webhookMessage)
+        // Send rich embed to Discord with proof preview if available
+        await sendDiscordEmbed({
+          title: `Payment proof uploaded — Order #${id.slice(-8)}`,
+          description: `Product: ${updatedOrder.product.name}`,
+          fields: [
+            { name: 'Method', value: updatedOrder.paymentMethod || 'N/A', inline: true },
+            { name: 'Customer', value: `${customer?.username ?? 'Unknown'} (${customer?.email ?? 'N/A'})`, inline: true },
+            { name: 'Discord', value: updatedOrder.discordUsername ?? 'N/A', inline: true },
+            { name: 'Roblox', value: updatedOrder.robloxUsername ?? 'N/A', inline: true },
+            ...(updatedOrder.transactionId ? [{ name: 'Transaction ID', value: updatedOrder.transactionId }] : []),
+          ],
+          imageUrl: updatedOrder.proofImage || undefined,
+        })
       }
 
       return NextResponse.json({
@@ -190,7 +189,7 @@ export async function PATCH(
       },
     })
 
-    // Create notification for the customer about status change
+    // Create notification for the customer about status change and send webhook
     if (parsed.data.status || parsed.data.deliveryStatus) {
       const statusMessages: Record<string, string> = {
         pending_payment: 'Your order is awaiting payment.',
@@ -228,6 +227,26 @@ export async function PATCH(
             type: 'order',
           },
         })
+
+        // Send webhook with order, customer and any proof/transaction info
+        const customer = updatedOrder.user
+        const fields = [
+          { name: 'Product', value: updatedOrder.product.name },
+          { name: 'Customer', value: `${customer?.username ?? 'Unknown'} (${customer?.email ?? 'N/A'})` },
+        ]
+        if (parsed.data.status) fields.push({ name: 'Status', value: String(parsed.data.status) })
+        if (parsed.data.deliveryStatus) fields.push({ name: 'Delivery', value: String(parsed.data.deliveryStatus) })
+        if ((parsed.data as any).transactionId) fields.push({ name: 'Transaction ID', value: String((parsed.data as any).transactionId) })
+        if ((parsed.data as any).proofImage) {
+          await sendDiscordEmbed({
+            title: `Order update — #${id.slice(-8)}`,
+            description: `Status updated`,
+            fields,
+            imageUrl: (parsed.data as any).proofImage,
+          })
+        } else {
+          await sendDiscordEmbed({ title: `Order update — #${id.slice(-8)}`, description: notifBody || undefined, fields })
+        }
       }
     }
 

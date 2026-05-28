@@ -14,6 +14,7 @@ export type ViewType =
   | 'support' 
   | 'ticket' 
   | 'robux'
+  | 'loyalty'
   | 'admin' 
   | 'admin-products' 
   | 'admin-orders' 

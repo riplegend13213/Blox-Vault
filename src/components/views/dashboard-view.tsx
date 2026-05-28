@@ -9,6 +9,7 @@ import {
   Clock,
   Heart,
   Bell,
+  Gift,
   Package,
   Settings,
   HelpCircle,
@@ -78,6 +79,16 @@ export function DashboardView() {
   const { data: wishlistData } = useQuery<WishlistResponse>({
     queryKey: ['user-wishlist'],
     queryFn: () => fetch('/api/wishlist').then((r) => r.json()),
+    enabled: isAuthenticated,
+  })
+
+  const { data: loyaltyData, isLoading: loyaltyLoading } = useQuery({
+    queryKey: ['loyalty-home'],
+    queryFn: async () => {
+      const res = await fetch('/api/loyalty')
+      const json = await res.json()
+      return json.success ? json.data : null
+    },
     enabled: isAuthenticated,
   })
 
@@ -163,6 +174,44 @@ export function DashboardView() {
           <HelpCircle className="w-4 h-4 mr-2" />
           Contact Support
         </Button>
+      </motion.div>
+
+      {/* Loyalty Card */}
+      <motion.div variants={item}>
+        <Card className="border-gold/20 bg-card gold-glow-subtle overflow-hidden relative">
+          <div className="absolute inset-0 cinematic-gradient pointer-events-none" />
+
+          <CardContent className="relative z-10 py-12 px-8 sm:px-12 text-center">
+            <h2 className="text-2xl sm:text-3xl font-bold mb-2">Earn While You <span className="text-gold">Shop</span></h2>
+            <p className="text-muted-foreground mb-6">Every purchase earns you loyalty points</p>
+
+            <div className="max-w-md mx-auto bg-card/20 rounded-lg p-6 border border-border/30">
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-gold/10 flex items-center justify-center mb-2">
+                  <Gift className="w-8 h-8 text-gold" />
+                </div>
+                <p className="font-semibold text-lg">1 Point per ৳100 spent</p>
+                <p className="text-sm text-muted-foreground">Each point = ৳1 discount</p>
+
+                <div className="mt-4 w-40 h-24 rounded-md bg-card/10 border border-border/20 flex items-center justify-center">
+                  {loyaltyLoading ? (
+                    <Loader2 className="w-6 h-6 animate-spin text-gold" />
+                  ) : (
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider text-center">Your Points Balance</p>
+                      <p className="text-2xl font-bold text-gold text-center">{(loyaltyData?.balance ?? 0).toLocaleString()} pts</p>
+                    </div>
+                  )}
+                </div>
+
+                <Button className="mt-4 bg-gold hover:bg-gold/90 text-gold-foreground" onClick={() => navigate('loyalty')}>
+                  View Dashboard
+                  <ChevronRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </motion.div>
 
       <Separator />

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createUser, getUserByEmail, getUserByUsername } from '@/lib/auth'
+import { db } from '@/lib/db'
 import { isSessionSigningEnabled, signSession } from '@/lib/session'
 
 const signupSchema = z.object({
@@ -49,6 +50,33 @@ export async function POST(request: Request) {
     }
 
     const user = await createUser({ username, email, password })
+
+    // Award signup bonus points (50 pts)
+    try {
+      await db.$transaction(async (tx) => {
+        await tx.pointTransaction.create({
+          data: {
+            userId: user.id,
+            amount: 50,
+            type: 'signup_bonus',
+            reference: null,
+          },
+        })
+
+        await tx.user.update({ where: { id: user.id }, data: { loyaltyPoints: { increment: 50 } } })
+
+        await tx.notification.create({
+          data: {
+            userId: user.id,
+            title: 'Welcome Bonus',
+            body: 'You received 50 bonus loyalty points for signing up!',
+            type: 'promo',
+          },
+        })
+      })
+    } catch (err) {
+      console.error('Signup bonus error:', err)
+    }
 
     const response = NextResponse.json({
       success: true,
