@@ -75,6 +75,9 @@ export function AdminUsersView() {
   const [selectedUser, setSelectedUser] = useState<UserRecord | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [banning, setBanning] = useState<string | null>(null)
+  const [pointAmount, setPointAmount] = useState<number>(0)
+  const [pointReason, setPointReason] = useState<string>('')
+  const [adjusting, setAdjusting] = useState<string | null>(null)
 
   const { data: usersData, isLoading } = useQuery({
     queryKey: ['admin-users', search, roleFilter, bannedFilter],
@@ -395,6 +398,51 @@ export function AdminUsersView() {
                 {/* Ban/Unban Button */}
                 {selectedUser.role !== 'admin' && (
                   <>
+                    <Separator />
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          value={pointAmount}
+                          onChange={(e) => setPointAmount(Number(e.target.value))}
+                          className="input bg-card border-border/50 w-32"
+                          placeholder="Points (+/-)"
+                        />
+                        <input
+                          type="text"
+                          value={pointReason}
+                          onChange={(e) => setPointReason(e.target.value)}
+                          className="input bg-card border-border/50 flex-1"
+                          placeholder="Reason (optional)"
+                        />
+                        <Button
+                          onClick={async () => {
+                            if (!pointAmount) return toast.error('Enter a non-zero points value')
+                            setAdjusting(selectedUser.id)
+                            try {
+                              const res = await fetch('/api/admin/loyalty', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ userId: selectedUser.id, points: pointAmount, reason: pointReason }),
+                              })
+                              const json = await res.json()
+                              if (!res.ok || !json.success) throw new Error(json.error || 'Failed to adjust points')
+                              toast.success('Points updated')
+                              queryClient.invalidateQueries({ queryKey: ['admin-users'] })
+                              setPointAmount(0)
+                              setPointReason('')
+                            } catch (err: any) {
+                              toast.error(err.message || 'Failed to update points')
+                            } finally {
+                              setAdjusting(null)
+                            }
+                          }}
+                          disabled={adjusting === selectedUser.id}
+                        >
+                          {adjusting === selectedUser.id ? 'Sending...' : 'Adjust Points'}
+                        </Button>
+                      </div>
+                    </div>
                     <Separator />
                     <Button
                       className={
