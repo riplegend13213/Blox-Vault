@@ -1756,8 +1756,7 @@ export function HomeView() {
       <HeroSection />
       <RobuxQuickAccessSection />
       <WhyChooseUsSection />
-      <ReviewsSection />
-      <LiveStatsSection />
+      <ReviewsSection /> 
       <FeaturedProductsSection />
       <FlashDealsSection />
       <LoyaltyProgramSection />
@@ -1767,3 +1766,4 @@ export function HomeView() {
     </div>
   )
 }
+//  <LiveStatsSection />
